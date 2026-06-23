@@ -1,0 +1,36 @@
+# Gradle / Android build output
+.gradle/
+**/.gradle/
+build/
+**/build/
+
+# Local Android/IDE state
+local.properties
+*.iml
+.idea/
+.vscode/
+.cxx/
+.externalNativeBuild/
+captures/
+
+# Built artifacts
+*.apk
+*.ap_
+*.aab
+
+# Android release signing
+android_app/keystore.properties
+android_app/release/*.jks
+android_app/release/*.keystore
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local agent/instruction files (kept on disk, not published)
+/CLAUDE.md
+/AGENTS.md
+/.claude/
+/PLAN.md

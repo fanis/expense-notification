@@ -1,0 +1,9 @@
+<resources>
+    <string name="accessibility_description">Fill reviewed payment notifications into Expense Manager.</string>
+
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#2d6cdf</item>
+    </style>
+</resources>

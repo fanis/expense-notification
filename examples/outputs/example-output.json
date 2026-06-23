@@ -1,0 +1,26 @@
+{
+  "id": "example-output",
+  "displayName": "Example Expense App",
+  "package": "com.example.expenses",
+  "activity": "com.example.expenses.AddTransactionActivity",
+  "constantExtras": {
+    "source": "expense-notification"
+  },
+  "fieldMap": {
+    "amount": "amount",
+    "payee": "payee",
+    "paymentMethod": "payment_method",
+    "category": "category",
+    "description": "description",
+    "date": "date"
+  },
+  "dateFormat": "yyyy-MM-dd",
+  "accessibility": {
+    "amountId": "com.example.expenses:id/amount",
+    "payeeId": "com.example.expenses:id/payee",
+    "descriptionId": "com.example.expenses:id/description",
+    "saveIds": [
+      "com.example.expenses:id/save"
+    ]
+  }
+}

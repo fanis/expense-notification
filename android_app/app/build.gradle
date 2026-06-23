@@ -1,0 +1,79 @@
+plugins {
+    id "com.android.application"
+}
+
+def releaseSigningValue = { name ->
+    def props = new Properties()
+    def propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) {
+        propsFile.withInputStream { props.load(it) }
+    }
+    return props.getProperty(name) ?: project.findProperty(name) ?: System.getenv(name)
+}
+
+def releaseStoreFilePath = releaseSigningValue("RELEASE_STORE_FILE")
+def releaseStorePassword = releaseSigningValue("RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = releaseSigningValue("RELEASE_KEY_ALIAS")
+def releaseKeyPassword = releaseSigningValue("RELEASE_KEY_PASSWORD")
+def releaseSigningConfigured = releaseStoreFilePath && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+def releaseTaskRequested = gradle.startParameter.taskNames.any { it.toLowerCase(Locale.ROOT).contains("release") }
+
+if (releaseTaskRequested && !releaseSigningConfigured) {
+    throw new GradleException("Release signing is not configured. Create android_app/keystore.properties locally or provide RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD.")
+}
+
+android {
+    namespace = "dev.fanis.expensenotification"
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = "dev.fanis.expensenotification"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 9
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile = rootProject.file(releaseStoreFilePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+        releaseBackedDebug {
+            if (releaseSigningConfigured) {
+                storeFile = rootProject.file(releaseStoreFilePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.releaseBackedDebug
+            }
+        }
+        release {
+            signingConfig = signingConfigs.release
+            minifyEnabled = false
+        }
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.json:json:20250517"
+    testImplementation "org.robolectric:robolectric:4.15.1"
+}

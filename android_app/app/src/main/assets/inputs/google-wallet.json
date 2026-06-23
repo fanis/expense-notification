@@ -1,0 +1,37 @@
+{
+  "id": "google-wallet",
+  "displayName": "Google Wallet",
+  "enabled": true,
+  "priority": 20,
+  "match": {
+    "packages": [
+      "com.google.android.apps.walletnfcrel"
+    ]
+  },
+  "rules": [
+    {
+      "name": "wallet-purchase",
+      "type": "amountFallback",
+      "merchantSource": "title",
+      "output": {
+        "paymentMethod": "@walletCard",
+        "category": "@keyword"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "merchant title with generic card fallback",
+      "package": "com.google.android.apps.walletnfcrel",
+      "app": "Google Wallet",
+      "title": "SAMPLE BILLER",
+      "body": "€44.09 with Revolut Visa ••0000\nView your purchase\n100000000",
+      "expect": {
+        "amount": "44.09",
+        "currency": "EUR",
+        "merchant": "SAMPLE BILLER",
+        "paymentMethod": "Credit Card"
+      }
+    }
+  ]
+}

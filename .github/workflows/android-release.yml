@@ -1,0 +1,79 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Restore release keystore
+        shell: bash
+        run: |
+          mkdir -p android_app/release
+          printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > android_app/release/expense-notification-release.jks
+          {
+            printf 'RELEASE_STORE_FILE=release/expense-notification-release.jks\n'
+            printf 'RELEASE_STORE_PASSWORD=%s\n' "${ANDROID_RELEASE_STORE_PASSWORD}"
+            printf 'RELEASE_KEY_ALIAS=%s\n' "${ANDROID_RELEASE_KEY_ALIAS}"
+            printf 'RELEASE_KEY_PASSWORD=%s\n' "${ANDROID_RELEASE_KEY_PASSWORD}"
+          } > android_app/keystore.properties
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+
+      - name: Build signed release APK
+        working-directory: android_app
+        run: gradle assembleRelease
+
+      - name: Name release APK
+        id: apk
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            version="manual-${GITHUB_SHA::7}"
+          fi
+          apk_name="ExpenseCapture-${version}.apk"
+          apk_path="android_app/app/build/outputs/apk/release/${apk_name}"
+          cp android_app/app/build/outputs/apk/release/app-release.apk "${apk_path}"
+          echo "name=${apk_name}" >> "${GITHUB_OUTPUT}"
+          echo "path=${apk_path}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.path }}
+          generate_release_notes: true

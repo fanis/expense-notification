@@ -1,0 +1,52 @@
+{
+  "id": "revolut",
+  "displayName": "Revolut",
+  "enabled": true,
+  "priority": 10,
+  "match": {
+    "packages": [
+      "com.revolut.revolut",
+      "com.revolut.business"
+    ]
+  },
+  "transforms": [
+    "normalizeAmount",
+    "multiCurrency"
+  ],
+  "rules": [
+    {
+      "name": "default",
+      "type": "amountFallback",
+      "merchantSource": "firstNonNoiseLine",
+      "output": {
+        "paymentMethod": "Credit Card",
+        "category": "@keyword"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "completed spend",
+      "package": "com.revolut.revolut",
+      "app": "Revolut",
+      "title": "SAMPLE UTILITY",
+      "body": "You spent €33.95\nEUR balance: €543.21",
+      "expect": {
+        "amount": "33.95",
+        "currency": "EUR",
+        "merchant": "SAMPLE UTILITY",
+        "paymentMethod": "Credit Card"
+      }
+    },
+    {
+      "name": "pending approval prompt is rejected",
+      "package": "com.revolut.business",
+      "app": "Business",
+      "title": "Verify a payment",
+      "body": "A card payment of €112.14 to SAMPLE UTILITY is waiting for your approval. Tap to start",
+      "expect": {
+        "matched": false
+      }
+    }
+  ]
+}

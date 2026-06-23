@@ -1,0 +1,82 @@
+{
+  "id": "alpha-bank",
+  "displayName": "Alpha Bank",
+  "enabled": true,
+  "priority": 50,
+  "match": {
+    "senders": [
+      "alpha bank",
+      "alphabank",
+      "alpha alerts"
+    ]
+  },
+  "transforms": [
+    "normalizeAmount"
+  ],
+  "rules": [
+    {
+      "name": "card-authorised",
+      "type": "regex",
+      "pattern": "YOUR\\s+CARD\\s+.+?\\*(?<card>\\d{4})\\s+WAS\\s+AUTHORISED\\s+FOR\\s+AN\\s+INDICATIVE\\s+AMOUNT\\s+(?<amount>(?:[0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2}|[0-9]+(?:[.,][0-9]{2})?))\\s*(?<currency>EUR|USD|GBP)\\s+ON\\s+\\d{1,2}/\\d{1,2}/\\d{4}\\s+\\d{1,2}:\\d{2}\\s+AT\\s+(?<merchant>.+?)\\s*$",
+      "flags": [
+        "caseInsensitive"
+      ],
+      "output": {
+        "paymentMethod": "Credit Card",
+        "category": "@keyword"
+      }
+    },
+    {
+      "name": "placed-transfer",
+      "type": "regex",
+      "pattern": "YOU\\s+HAVE\\s+PLACED\\s+A\\s+TRANSFER\\s+TO\\s+(?<merchant>\\S+)\\s+FOR\\s+(?<amount>(?:[0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2}|[0-9]+(?:[.,][0-9]{2})?))\\s*(?<currency>EUR|USD|GBP)\\s+WITH\\s+REF\\s+(?<note>\\S+)\\s*$",
+      "flags": [
+        "caseInsensitive"
+      ],
+      "output": {
+        "paymentMethod": "Electronic Transfer",
+        "category": "Transfers"
+      }
+    },
+    {
+      "name": "unmatched-bank-amount",
+      "type": "amountFallback",
+      "merchantSource": "empty",
+      "noteSource": "body",
+      "output": {
+        "paymentMethod": "Electronic Transfer",
+        "category": "@keyword"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "placed transfer",
+      "package": "com.textra",
+      "app": "Textra",
+      "title": "Alpha Bank",
+      "body": "YOU HAVE PLACED A TRANSFER TO SAMPLE****000 FOR 3.780,00EUR WITH REF REF000000",
+      "expect": {
+        "amount": "3780.00",
+        "currency": "EUR",
+        "merchant": "SAMPLE****000",
+        "category": "Transfers",
+        "paymentMethod": "Electronic Transfer",
+        "note": "REF000000"
+      }
+    },
+    {
+      "name": "card authorised",
+      "package": "com.textra",
+      "app": "Textra",
+      "title": "Alpha Bank",
+      "body": "YOUR CARD SAMPLE VISA *0000 WAS AUTHORISED FOR AN INDICATIVE AMOUNT 36,79 EUR ON 03/12/2023 13:01 AT SAMPLE MERCHANT - COUNTRY",
+      "expect": {
+        "amount": "36.79",
+        "currency": "EUR",
+        "merchant": "SAMPLE MERCHANT - COUNTRY",
+        "paymentMethod": "Credit Card"
+      }
+    }
+  ]
+}
