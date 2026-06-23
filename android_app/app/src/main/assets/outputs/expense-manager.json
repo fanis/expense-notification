@@ -1,0 +1,27 @@
+{
+  "id": "expense-manager",
+  "displayName": "Bishinews Expense Manager",
+  "package": "com.expensemanager.pro",
+  "activity": "com.expensemanager.ExpenseNewTransaction",
+  "constantExtras": {
+    "fromWhere": "widgetAdd"
+  },
+  "fieldMap": {
+    "amount": "amount",
+    "payee": "payee",
+    "paymentMethod": "paymentMethod",
+    "category": "category",
+    "description": "description",
+    "date": "date"
+  },
+  "dateFormat": "yyyy-MM-dd",
+  "accessibility": {
+    "amountId": "com.expensemanager.pro:id/expenseAmountInput",
+    "payeeId": "com.expensemanager.pro:id/payee",
+    "descriptionId": "com.expensemanager.pro:id/expenseDescriptionInput",
+    "saveIds": [
+      "com.expensemanager.pro:id/expenseSave",
+      "com.expensemanager.pro:id/expenseSaveNew"
+    ]
+  }
+}

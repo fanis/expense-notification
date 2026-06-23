@@ -1,0 +1,23 @@
+{
+  "smsPackages": [
+    "com.textra",
+    "com.google.android.apps.messaging",
+    "com.samsung.android.messaging",
+    "com.android.mms"
+  ],
+  "dropZeroAmount": true,
+  "rejectPhrases": [
+    "waiting for your approval",
+    "verify a payment",
+    "verify your payment",
+    "tap to start",
+    "declined",
+    "insufficient balance",
+    "insufficient funds",
+    "verified your card",
+    "haven't been charged",
+    "have not been charged",
+    "card registration",
+    "card verification"
+  ]
+}

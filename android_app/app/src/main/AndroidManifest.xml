@@ -1,0 +1,89 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <queries>
+        <package android:name="com.expensemanager.pro" />
+        <package android:name="com.revolut.revolut" />
+        <package android:name="com.revolut.business" />
+        <package android:name="com.google.android.apps.walletnfcrel" />
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="sms" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="sms" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:theme="@style/AppTheme"
+        android:label="Expense Notification Helper"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:usesCleartextTraffic="false"
+        android:resizeableActivity="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Settings"
+            android:exported="false" />
+
+        <activity
+            android:name=".ConfigActivity"
+            android:label="Configs"
+            android:exported="false" />
+
+        <activity
+            android:name=".SmsAppsActivity"
+            android:label="SMS apps"
+            android:exported="false" />
+
+        <activity
+            android:name=".PayeeAliasesActivity"
+            android:label="Payee aliases"
+            android:exported="false" />
+
+        <activity
+            android:name=".BlockedMerchantsActivity"
+            android:label="Blocked merchants"
+            android:exported="false" />
+
+        <service
+            android:name=".ExpenseNotificationListener"
+            android:label="Expense Notification Helper"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".ExpenseEntryAccessibilityService"
+            android:label="Expense Notification Helper form filler"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+    </application>
+</manifest>

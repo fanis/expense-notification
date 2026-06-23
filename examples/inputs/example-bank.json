@@ -1,0 +1,41 @@
+{
+  "id": "example-bank",
+  "displayName": "Example Bank",
+  "enabled": true,
+  "priority": 80,
+  "match": {
+    "packages": [
+      "com.example.bank"
+    ]
+  },
+  "rules": [
+    {
+      "name": "paid-at",
+      "type": "regex",
+      "pattern": "Paid\\s+(?<currency>EUR|USD|GBP)\\s+(?<amount>[0-9]+(?:[.,][0-9]{2})?)\\s+at\\s+(?<merchant>.+)",
+      "flags": [
+        "caseInsensitive"
+      ],
+      "output": {
+        "paymentMethod": "Example Bank",
+        "category": "@keyword"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "merchant spend",
+      "package": "com.example.bank",
+      "app": "Example Bank",
+      "title": "Example Bank",
+      "body": "Paid EUR 12.40 at SAMPLE MARKET",
+      "expect": {
+        "amount": "12.40",
+        "currency": "EUR",
+        "merchant": "SAMPLE MARKET",
+        "category": "Groceries",
+        "paymentMethod": "Example Bank"
+      }
+    }
+  ]
+}
