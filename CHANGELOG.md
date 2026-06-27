@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Date the expense to the transaction date written in the bank SMS (e.g. `ΣΤΙΣ 26/05/2026 20:17`, `on 23/05/26 12:55`, `ON 03/12/2023 13:01`) instead of when the notification arrived, so a delayed or re-posted SMS no longer lands on today. Falls back to the notification post time when the message carries no date (e.g. Revolut spends, the Eurobank card alert that only shows `@HH:mm`).
 
 ## v1.0.0 - 2026-06-23
 - Start the pluggable rewrite: load parser input sources from bundled/user JSON files, include the local Cyprus bank defaults, and move watched packages/SMS senders behind that config.

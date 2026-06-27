@@ -13,6 +13,9 @@ import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class ExpenseParserTest {
 
@@ -55,6 +58,10 @@ public class ExpenseParserTest {
 
     private static Candidate parseSms(String sender, String body) {
         return ExpenseParser.parse(SMS_PACKAGE, SMS_APP, "key", 0L, sender, body);
+    }
+
+    private static String formatDay(long postedAt) {
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date(postedAt));
     }
 
     @Test
@@ -274,6 +281,39 @@ public class ExpenseParserTest {
             assertEquals("SAMPLE MERCHANT", c.merchant);
             assertEquals("Credit Card", c.suggestedPaymentMethod);
         }
+    }
+
+    @Test
+    public void datesExpenseToTransactionDateInSmsBody() {
+        // The SMS arrived (notification posted) far later than the transaction; the
+        // expense must be dated to the date written in the SMS, not the arrival time.
+        long arrivedNov2023 = 1_700_000_000_000L;
+        Candidate c = ExpenseParser.parse(SMS_PACKAGE, SMS_APP, "key", arrivedNov2023, "BOC Message",
+                "Η ΚΑΡΤΑ ΣΑΣ VISA*1234 ΕΧΕΙ ΧΡΗΣΙΜΟΠΟΙΗΘΕΙ ΣΤΟ SAMPLE STORE "
+                        + "ΣΤΙΣ 26/05/2026, 20:17 ΓΙΑ ΤΟ ΕΝΔΕΙΚΤΙΚΟ ΠΟΣΟ €15,30.");
+        assertNotNull(c);
+        assertEquals("2026-05-26", formatDay(c.postedAt));
+    }
+
+    @Test
+    public void datesIncomingCreditToTwoDigitYearDate() {
+        long arrived = 1_700_000_000_000L;
+        Candidate c = ExpenseParser.parse(SMS_PACKAGE, SMS_APP, "key", arrived, "BOC Message",
+                "The a/c XXXX000000 (CURRENT) was credited with the amount of "
+                        + "EUR 300,00 on 23/05/26 12:55 From: SAMPLE PAYER Details: SAMPLE NOTE");
+        assertNotNull(c);
+        assertEquals("2026-05-23", formatDay(c.postedAt));
+    }
+
+    @Test
+    public void keepsNotificationPostTimeWhenSmsHasNoDate() {
+        // Revolut spend notifications carry no transaction date, so the expense keeps
+        // the notification's post time.
+        long arrived = 1_700_000_000_000L;
+        Candidate c = ExpenseParser.parse("com.revolut.revolut", "Revolut", "k", arrived,
+                "SAMPLE UTILITY", "You spent €33.95\nEUR balance: €543.21");
+        assertNotNull(c);
+        assertEquals(arrived, c.postedAt);
     }
 
     @Test

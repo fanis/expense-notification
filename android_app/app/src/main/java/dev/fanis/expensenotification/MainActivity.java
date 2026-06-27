@@ -246,7 +246,8 @@ public class MainActivity extends BaseActivity {
         // Income transactions need category="Income" - the only value that flips
         // Expense Manager to the Income tab via the prefill intent.
         String category = candidate.isIncome() ? "Income" : "";
-        // Date the expense to when the payment notification was posted, not now(): a
+        // Date the expense to when the payment happened (the transaction date parsed
+        // from the SMS, or the notification post time as a fallback), not now(): a
         // candidate may sit in the queue for days before the user fills it.
         String date = expenseDate(candidate.postedAt, profile.dateFormat);
         fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date);
