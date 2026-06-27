@@ -168,6 +168,7 @@ final class CandidateDb extends SQLiteOpenHelper {
         candidate.suggestedPaymentMethod = reparsed.suggestedPaymentMethod;
         candidate.note = reparsed.note;
         candidate.transactionType = reparsed.transactionType;
+        candidate.postedAt = reparsed.postedAt;
     }
 
     private static String value(String text) {

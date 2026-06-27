@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -35,6 +36,13 @@ final class ExpenseParser {
     // A money amount with optional grouped thousands (1.234,56) or a plain value (300,00 / 12.34).
     // normalizeAmount() resolves which separator is the decimal point afterwards.
     private static final String MONEY = "(?:[0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2}|[0-9]+(?:[.,][0-9]{2})?)";
+
+    // The transaction date the bank wrote into the SMS body (Cyprus/EU day-first:
+    // dd/MM/yyyy or dd/MM/yy, optional HH:mm after a space or comma). Used to date the
+    // expense to when the payment happened rather than when the notification arrived,
+    // which can be much later for a delayed or re-posted SMS.
+    private static final Pattern TRANSACTION_DATE = Pattern.compile(
+            "\\b(\\d{1,2})/(\\d{1,2})/(\\d{2,4})\\b(?:[\\s,]+(\\d{1,2}):(\\d{2}))?");
 
     private static final Pattern SYMBOL_AMOUNT = Pattern.compile("([\\u20AC$\\u00A3])\\s*(" + MONEY + ")");
     private static final Pattern AMOUNT_SYMBOL = Pattern.compile("(" + MONEY + ")\\s*([\\u20AC$\\u00A3])");
@@ -338,6 +346,45 @@ final class ExpenseParser {
             return "GBP";
         }
         return symbol;
+    }
+
+    // Date the expense to the transaction date in the notification text when present,
+    // falling back to when the notification was posted. Time of day is kept when the
+    // message includes it, otherwise noon (a safe hour that never rolls the calendar
+    // day over across time zones).
+    private static long transactionTime(String title, String body, long fallback) {
+        Matcher matcher = TRANSACTION_DATE.matcher(safe(title) + "\n" + safe(body));
+        if (!matcher.find()) {
+            return fallback;
+        }
+        try {
+            int day = Integer.parseInt(matcher.group(1));
+            int month = Integer.parseInt(matcher.group(2));
+            int year = Integer.parseInt(matcher.group(3));
+            if (year < 100) {
+                year += 2000;
+            }
+            if (day < 1 || day > 31 || month < 1 || month > 12) {
+                return fallback;
+            }
+            int hour = 12;
+            int minute = 0;
+            if (matcher.group(4) != null) {
+                int h = Integer.parseInt(matcher.group(4));
+                int m = Integer.parseInt(matcher.group(5));
+                if (h <= 23 && m <= 59) {
+                    hour = h;
+                    minute = m;
+                }
+            }
+            Calendar calendar = Calendar.getInstance();
+            calendar.clear();
+            calendar.setLenient(false);
+            calendar.set(year, month - 1, day, hour, minute, 0);
+            return calendar.getTimeInMillis();
+        } catch (Exception ignored) {
+            return fallback;
+        }
     }
 
     private static String normalizeAmount(String raw) {
@@ -817,7 +864,7 @@ final class ExpenseParser {
         candidate.appName = appName;
         candidate.title = safe(title);
         candidate.text = safe(body);
-        candidate.postedAt = postedAt;
+        candidate.postedAt = transactionTime(title, body, postedAt);
         candidate.originalAmount = "";
         candidate.originalCurrency = "";
         candidate.note = "";
