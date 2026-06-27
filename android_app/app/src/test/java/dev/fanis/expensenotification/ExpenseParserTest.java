@@ -277,6 +277,35 @@ public class ExpenseParserTest {
     }
 
     @Test
+    public void parsesEurobankCardApprovedWithThousandsSeparator() {
+        // Real notification: €3.000,00 is three thousand euros (European grouping),
+        // not 3.00. The card-approved amount group must accept grouped thousands.
+        String sms = "Η ΚΑΡΤΑ *0808 ΕΓΚΡΙΘΗΚΕ ΓΙΑ SAMPLE MERCHANT €3.000,00 @12:33";
+        for (String body : new String[] {sms, toLatinLookalike(sms)}) {
+            Candidate c = parseSms("EurobankCY", body);
+            assertNotNull(c);
+            assertEquals("EUR", c.currency);
+            assertEquals("3000.00", c.amount);
+            assertEquals("SAMPLE MERCHANT", c.merchant);
+            assertEquals("Credit Card", c.suggestedPaymentMethod);
+        }
+    }
+
+    @Test
+    public void parsesBocCardPurchaseWithThousandsSeparator() {
+        String card = "Η ΚΑΡΤΑ ΣΑΣ VISA*1234 ΕΧΕΙ ΧΡΗΣΙΜΟΠΟΙΗΘΕΙ ΣΤΟ SAMPLE STORE "
+                + "ΣΤΙΣ 26/05/2026, 20:17 ΓΙΑ ΤΟ ΕΝΔΕΙΚΤΙΚΟ ΠΟΣΟ €1.250,00.";
+        for (String body : new String[] {card, toLatinLookalike(card)}) {
+            Candidate c = parseSms("BOC Message", body);
+            assertNotNull(c);
+            assertEquals("EUR", c.currency);
+            assertEquals("1250.00", c.amount);
+            assertEquals("SAMPLE STORE", c.merchant);
+            assertEquals("Credit Card", c.suggestedPaymentMethod);
+        }
+    }
+
+    @Test
     public void genericBocSmsLeavesPayeeEmptyAndBillsElectronicTransfer() {
         // A BOC SMS that matches no specific pattern (e.g. a balance alert) still gets
         // sensible defaults: empty payee, SMS text as note, Electronic Transfer method.

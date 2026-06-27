@@ -32,28 +32,28 @@ final class ExpenseParser {
     // otherwise the prefill intent leaves the field blank.
     private static final String DEFAULT_PAYMENT_METHOD = "Credit Card";
 
-    private static final Pattern SYMBOL_AMOUNT = Pattern.compile("([\\u20AC$\\u00A3])\\s*([0-9]+(?:[.,][0-9]{2})?)");
-    private static final Pattern AMOUNT_SYMBOL = Pattern.compile("([0-9]+(?:[.,][0-9]{2})?)\\s*([\\u20AC$\\u00A3])");
-    private static final Pattern ISO_AMOUNT = Pattern.compile("\\b(EUR|USD|GBP)\\s*([0-9]+(?:[.,][0-9]{2})?)\\b", Pattern.CASE_INSENSITIVE);
-    private static final Pattern AMOUNT_ISO = Pattern.compile("\\b([0-9]+(?:[.,][0-9]{2})?)\\s*(EUR|USD|GBP)\\b", Pattern.CASE_INSENSITIVE);
+    // A money amount with optional grouped thousands (1.234,56) or a plain value (300,00 / 12.34).
+    // normalizeAmount() resolves which separator is the decimal point afterwards.
+    private static final String MONEY = "(?:[0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2}|[0-9]+(?:[.,][0-9]{2})?)";
+
+    private static final Pattern SYMBOL_AMOUNT = Pattern.compile("([\\u20AC$\\u00A3])\\s*(" + MONEY + ")");
+    private static final Pattern AMOUNT_SYMBOL = Pattern.compile("(" + MONEY + ")\\s*([\\u20AC$\\u00A3])");
+    private static final Pattern ISO_AMOUNT = Pattern.compile("\\b(EUR|USD|GBP)\\s*(" + MONEY + ")", Pattern.CASE_INSENSITIVE);
+    private static final Pattern AMOUNT_ISO = Pattern.compile("\\b(" + MONEY + ")\\s*(EUR|USD|GBP)\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern PAID_AT = Pattern.compile(
-            "\\bpaid\\s+(?:[\\u20AC$\\u00A3]\\s*)?(?:EUR|USD|GBP)?\\s*[0-9]+(?:[.,][0-9]{2})?" +
-                    "(?:\\s*\\(\\s*[\\u20AC$\\u00A3]\\s*[0-9]+(?:[.,][0-9]{2})?\\s*\\))?" +
+            "\\bpaid\\s+(?:[\\u20AC$\\u00A3]\\s*)?(?:EUR|USD|GBP)?\\s*" + MONEY +
+                    "(?:\\s*\\(\\s*[\\u20AC$\\u00A3]\\s*" + MONEY + "\\s*\\))?" +
                     "\\s+(?:[A-Z]{3}\\s+)?at\\s+([^\\n\\r]+)",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern MULTI_CURRENCY_PAID = Pattern.compile(
-            "\\bpaid\\s+([\\u20AC$\\u00A3])\\s*([0-9]+(?:[.,][0-9]{2})?)" +
-                    "\\s*\\(\\s*([\\u20AC$\\u00A3])\\s*([0-9]+(?:[.,][0-9]{2})?)\\s*\\)",
+            "\\bpaid\\s+([\\u20AC$\\u00A3])\\s*(" + MONEY + ")" +
+                    "\\s*\\(\\s*([\\u20AC$\\u00A3])\\s*(" + MONEY + ")\\s*\\)",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern ACCOUNT_BALANCE_CCY = Pattern.compile(
             "\\b(EUR|USD|GBP)\\s+Balance\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern WALLET_PAYMENT_METHOD = Pattern.compile(
-            "(?m)^\\s*(?:(?:[\\u20AC$\\u00A3]\\s*)?[0-9]+(?:[.,][0-9]{2})?|(?:EUR|USD|GBP)\\s*[0-9]+(?:[.,][0-9]{2})?|[0-9]+(?:[.,][0-9]{2})?\\s*(?:EUR|USD|GBP))\\s+with\\s+([^\\n\\r]+?)\\s*$",
+            "(?m)^\\s*(?:(?:[\\u20AC$\\u00A3]\\s*)?" + MONEY + "|(?:EUR|USD|GBP)\\s*" + MONEY + "|" + MONEY + "\\s*(?:EUR|USD|GBP))\\s+with\\s+([^\\n\\r]+?)\\s*$",
             Pattern.CASE_INSENSITIVE);
-
-    // A money amount with optional grouped thousands (1.234,56) or a plain value (300,00 / 12.34).
-    // normalizeAmount() resolves which separator is the decimal point afterwards.
-    private static final String MONEY = "(?:[0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2}|[0-9]+(?:[.,][0-9]{2})?)";
 
     private ExpenseParser() {
     }
@@ -1016,7 +1016,7 @@ final class ExpenseParser {
                 JSONArray rules = new JSONArray();
                 rules.put(regexRule(
                         "card-use",
-                        "\u0397\\s+\u039A\u0391\u03A1\u03A4\u0391\\s+\u03A3\u0391\u03A3\\s+[A-Z]+\\*?(?<card>\\d{4})\\s+\u0395\u03A7\u0395\u0399\\s+\u03A7\u03A1\u0397\u03A3\u0399\u039C\u039F\u03A0\u039F\u0399\u0397\u0398\u0395\u0399\\s+\u03A3\u03A4\u039F\\s+(?<merchant>[\\s\\S]+?)\\s+\u03A3\u03A4\u0399\u03A3\\s+\\d{1,2}/\\d{1,2}/\\d{4},\\s+\\d{1,2}:\\d{2}\\s+\u0393\u0399\u0391\\s+\u03A4\u039F\\s+\u0395\u039D\u0394\u0395\u0399\u039A\u03A4\u0399\u039A\u039F\\s+\u03A0\u039F\u03A3\u039F\\s+\\u20AC\\s*(?<amount>[0-9]+(?:[.,][0-9]{2})?)\\.?",
+                        "\u0397\\s+\u039A\u0391\u03A1\u03A4\u0391\\s+\u03A3\u0391\u03A3\\s+[A-Z]+\\*?(?<card>\\d{4})\\s+\u0395\u03A7\u0395\u0399\\s+\u03A7\u03A1\u0397\u03A3\u0399\u039C\u039F\u03A0\u039F\u0399\u0397\u0398\u0395\u0399\\s+\u03A3\u03A4\u039F\\s+(?<merchant>[\\s\\S]+?)\\s+\u03A3\u03A4\u0399\u03A3\\s+\\d{1,2}/\\d{1,2}/\\d{4},\\s+\\d{1,2}:\\d{2}\\s+\u0393\u0399\u0391\\s+\u03A4\u039F\\s+\u0395\u039D\u0394\u0395\u0399\u039A\u03A4\u0399\u039A\u039F\\s+\u03A0\u039F\u03A3\u039F\\s+\\u20AC\\s*(?<amount>" + MONEY + ")\\.?",
                         list("caseInsensitive", "unicodeCase"),
                         new JSONObject()
                                 .put("currency", "EUR")
@@ -1024,7 +1024,7 @@ final class ExpenseParser {
                                 .put("category", "@keyword")));
                 rules.put(regexRule(
                         "account-debit",
-                        "\u039F\\s+\u039B\u039F\u0393[\\s\\S]*?\\d{3,}[\\s\\S]*?\u03A7\u03A1\u0395\u03A9\u0398\u0397\u039A\u0395[\\s\\S]*?\u03A0\u039F\u03A3\u039F\\s+(?:\u03A4\u03A9\u039D\\s+)?(?<currency>EUR|USD|GBP)\\s*(?<amount>[0-9]+(?:[.,][0-9]{2})?)[\\s\\S]*?\u03A0\u0395\u03A1\u0399\u0393\u03A1\u0391\u03A6\u0397\\s*:\\s*(?<merchant>.+?)\\s*$",
+                        "\u039F\\s+\u039B\u039F\u0393[\\s\\S]*?\\d{3,}[\\s\\S]*?\u03A7\u03A1\u0395\u03A9\u0398\u0397\u039A\u0395[\\s\\S]*?\u03A0\u039F\u03A3\u039F\\s+(?:\u03A4\u03A9\u039D\\s+)?(?<currency>EUR|USD|GBP)\\s*(?<amount>" + MONEY + ")[\\s\\S]*?\u03A0\u0395\u03A1\u0399\u0393\u03A1\u0391\u03A6\u0397\\s*:\\s*(?<merchant>.+?)\\s*$",
                         list("caseInsensitive", "unicodeCase", "multiline"),
                         new JSONObject()
                                 .put("paymentMethod", "Electronic Transfer")
@@ -1065,7 +1065,7 @@ final class ExpenseParser {
                 JSONArray rules = new JSONArray();
                 rules.put(regexRule(
                         "card-approved",
-                        "\u0397\\s+\u039A\u0391\u03A1\u03A4\u0391\\s+\\*?(?<card>\\d{4})\\s+\u0395\u0393\u039A\u03A1\u0399\u0398\u0397\u039A\u0395\\s+\u0393\u0399\u0391\\s+(?<merchant>.+?)\\s+\\u20AC\\s*(?<amount>[0-9]+(?:[.,][0-9]{2})?)\\s*(?:@\\d{1,2}:\\d{2})?\\s*$",
+                        "\u0397\\s+\u039A\u0391\u03A1\u03A4\u0391\\s+\\*?(?<card>\\d{4})\\s+\u0395\u0393\u039A\u03A1\u0399\u0398\u0397\u039A\u0395\\s+\u0393\u0399\u0391\\s+(?<merchant>.+?)\\s+\\u20AC\\s*(?<amount>" + MONEY + ")\\s*(?:@\\d{1,2}:\\d{2})?\\s*$",
                         list("unicodeCase"),
                         new JSONObject()
                                 .put("currency", "EUR")
