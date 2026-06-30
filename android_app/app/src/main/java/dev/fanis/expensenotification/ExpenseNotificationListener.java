@@ -23,6 +23,10 @@ public class ExpenseNotificationListener extends NotificationListenerService {
         return listener.scanActiveNotifications(context);
     }
 
+    public static boolean isConnected() {
+        return instance.get() != null;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -35,15 +39,23 @@ public class ExpenseNotificationListener extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
         instance = new WeakReference<>(this);
+        diagnostics(this).edit()
+                .putLong("last_connected_at", System.currentTimeMillis())
+                .apply();
         scanActiveNotifications(this);
     }
 
     @Override
     public void onListenerDisconnected() {
         instance = new WeakReference<>(null);
+        diagnostics(this).edit()
+                .putLong("last_disconnected_at", System.currentTimeMillis())
+                .apply();
         // The system can unbind the listener (low memory, app/OS update). Without an
         // explicit rebind request it stays disconnected until the app is reopened or
         // the device reboots, silently dropping every payment notification meanwhile.
+        // This only fires on an orderly unbind; a hard process kill skips it, so the
+        // periodic ListenerWatchdogJob re-requests the rebind independently.
         requestRebind(new ComponentName(this, ExpenseNotificationListener.class));
     }
 
@@ -114,7 +126,7 @@ public class ExpenseNotificationListener extends NotificationListenerService {
                 context,
                 sbn.getPackageName(),
                 appName(context, sbn.getPackageName()),
-                sbn.getKey(),
+                dedupeKey(sbn, body),
                 sbn.getPostTime(),
                 title.isEmpty() ? firstNonEmpty(ticker, tag) : title,
                 body);
@@ -130,6 +142,18 @@ public class ExpenseNotificationListener extends NotificationListenerService {
                 .putString("last_result", inserted == -1 ? "Duplicate candidate ignored" : "Candidate saved")
                 .apply();
         return inserted != -1;
+    }
+
+    // Identity used to dedupe captures (stored in the candidates table's UNIQUE
+    // notification_key). sbn.getKey() alone is not enough: messaging apps (e.g. Textra)
+    // post every SMS from one sender under a single conversation notification, reusing
+    // the same key for every bank SMS, so all but the first were silently dropped on the
+    // UNIQUE constraint. Folding the message body into the key makes each distinct SMS a
+    // separate candidate, while re-scanning the same still-active notification (same key
+    // + same body) still dedupes. Per-notification sources like Revolut keep a unique
+    // sbn.getKey() per transaction, so two identical charges remain two candidates.
+    private static String dedupeKey(StatusBarNotification sbn, String body) {
+        return sbn.getKey() + "#" + Integer.toHexString((body == null ? "" : body).hashCode());
     }
 
     private static String titleOf(StatusBarNotification sbn) {

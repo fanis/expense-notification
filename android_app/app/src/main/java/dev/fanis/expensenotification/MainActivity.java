@@ -31,6 +31,8 @@ public class MainActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = new CandidateDb(this);
+        // Keep the notification listener revived if the system unbinds or kills it.
+        ListenerWatchdogJob.schedule(this);
         setContentView(buildUi());
         refresh();
     }
