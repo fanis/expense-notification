@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.0.1 - 2026-06-30
 - Fix bank SMS after the first being silently dropped: messaging apps (e.g. Textra) post every SMS from one sender under a single conversation notification, so every Bank of Cyprus SMS shared one notification key and collided on the queue's unique-key constraint after the first capture. The dedupe key now folds in the message body, so each distinct SMS is queued while re-scanning the same still-active notification still dedupes. Card-app notifications (Revolut, Google Wallet) keep a unique key per transaction, so identical charges still queue separately.
 - Add a periodic listener watchdog (JobScheduler, ~15 min, persists across reboot) that re-requests a notification-listener rebind when the system has unbound it. The existing rebind only runs on an orderly disconnect; a hard process kill skipped it, leaving the listener silently dead (and payment notifications dropped) until the app was reopened or the device rebooted. When the listener is connected the job also rescans still-active notifications. Records listener connect/disconnect and watchdog activity for diagnostics.
 - Date the expense to the transaction date written in the bank SMS (e.g. `ΣΤΙΣ 26/05/2026 20:17`, `on 23/05/26 12:55`, `ON 03/12/2023 13:01`) instead of when the notification arrived, so a delayed or re-posted SMS no longer lands on today. Falls back to the notification post time when the message carries no date (e.g. Revolut spends, the Eurobank card alert that only shows `@HH:mm`).
