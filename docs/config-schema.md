@@ -1,6 +1,14 @@
 # Parser and Output Config Schema
 
-Configs are JSON files bundled in `android_app/app/src/main/assets` and user-editable on-device from Settings > Parser and output configs. User files with the same name override bundled files.
+Configs are JSON files bundled in `android_app/app/src/main/assets` and user-editable on-device from Settings > Parser and output configs. User files with the same name override bundled files. Deleting a bundled config from the UI hides it: the parser stops using it entirely until it is restored.
+
+## Global Config
+
+`global.json` holds parser-wide settings:
+
+- `smsPackages`: messaging app packages whose notifications are checked against SMS `senders`. Extended on-device from Settings > SMS apps.
+- `rejectPhrases`: lowercase phrases that mark a notification as not-a-charge (3DS prompts, declines, card verification); matching notifications are never queued.
+- `dropZeroAmount`: drop zero-amount captures (e.g. a €0 card registration). Defaults to `true`.
 
 ## Input Parser
 

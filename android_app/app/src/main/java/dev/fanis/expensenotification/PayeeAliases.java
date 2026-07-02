@@ -96,10 +96,6 @@ final class PayeeAliases {
         return result;
     }
 
-    static List<String> keys(Context context) {
-        return new ArrayList<>(all(context).keySet());
-    }
-
     static void remove(Context context, String key) {
         store(context).edit().remove(key).apply();
     }
@@ -109,10 +105,6 @@ final class PayeeAliases {
     }
 
     // ---- Blacklist: merchants that must never be auto-learned or auto-mapped. ----
-
-    static boolean isBlacklisted(Context context, String merchant) {
-        return isBlacklistedKey(context, normalize(merchant));
-    }
 
     private static boolean isBlacklistedKey(Context context, String key) {
         return !key.isEmpty() && blacklistStore(context).contains(key);

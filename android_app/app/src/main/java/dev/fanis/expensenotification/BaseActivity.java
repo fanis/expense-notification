@@ -37,13 +37,9 @@ abstract class BaseActivity extends Activity {
     /** Wraps a vertical content column in a scroller with status/navigation-bar insets applied. */
     protected ScrollView scrollRoot(LinearLayout root) {
         Window window = getWindow();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.setStatusBarColor(COLOR_TEAL);
-            window.setNavigationBarColor(Color.WHITE);
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        }
+        window.setStatusBarColor(COLOR_TEAL);
+        window.setNavigationBarColor(Color.WHITE);
+        window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(COLOR_BG);
@@ -112,27 +108,25 @@ abstract class BaseActivity extends Activity {
         header.setPadding(dp(26), fallbackTop + dp(20), dp(26), dp(20));
         root.setPadding(horizontalPadding, contentTopPadding, horizontalPadding, dp(16) + fallbackBottom);
         scroll.setClipToPadding(false);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            scroll.setOnApplyWindowInsetsListener((view, insets) -> {
-                int top = fallbackTop;
-                int bottom = fallbackBottom;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Insets systemBars = insets.getInsets(WindowInsets.Type.systemBars());
-                    top = Math.max(top, systemBars.top);
-                    bottom = Math.max(bottom, systemBars.bottom);
-                } else {
-                    top = Math.max(top, insets.getSystemWindowInsetTop());
-                    bottom = Math.max(bottom, insets.getSystemWindowInsetBottom());
-                }
-                header.setPadding(dp(26), top + dp(20), dp(26), dp(20));
-                root.setPadding(
-                        horizontalPadding,
-                        contentTopPadding,
-                        horizontalPadding,
-                        dp(16) + bottom);
-                return insets;
-            });
-        }
+        scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top = fallbackTop;
+            int bottom = fallbackBottom;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Insets systemBars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = Math.max(top, systemBars.top);
+                bottom = Math.max(bottom, systemBars.bottom);
+            } else {
+                top = Math.max(top, insets.getSystemWindowInsetTop());
+                bottom = Math.max(bottom, insets.getSystemWindowInsetBottom());
+            }
+            header.setPadding(dp(26), top + dp(20), dp(26), dp(20));
+            root.setPadding(
+                    horizontalPadding,
+                    contentTopPadding,
+                    horizontalPadding,
+                    dp(16) + bottom);
+            return insets;
+        });
         outer.addView(header, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -192,10 +186,8 @@ abstract class BaseActivity extends Activity {
         button.setMinHeight(dp(46));
         button.setPadding(dp(18), 0, dp(18), 0);
         button.setBackground(rounded(COLOR_TEAL, COLOR_TEAL, 5));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            button.setElevation(0f);
-            button.setStateListAnimator(null);
-        }
+        button.setElevation(0f);
+        button.setStateListAnimator(null);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -307,5 +299,33 @@ abstract class BaseActivity extends Activity {
 
     protected static String emptyDash(String text) {
         return text == null || text.isEmpty() ? "-" : text;
+    }
+
+    protected boolean isNotificationListenerEnabled() {
+        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+        return containsComponent(enabled, ExpenseNotificationListener.class.getName());
+    }
+
+    protected boolean isAccessibilityServiceEnabled() {
+        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_accessibility_services");
+        return "1".equals(Settings.Secure.getString(getContentResolver(), "accessibility_enabled")) &&
+                containsComponent(enabled, ExpenseEntryAccessibilityService.class.getName());
+    }
+
+    // The Settings.Secure lists are ':'-separated flattened components; match each
+    // entry exactly (long and short form) rather than by substring, so another
+    // package whose name merely contains ours can't count as enabled.
+    private boolean containsComponent(String enabled, String className) {
+        if (enabled == null || enabled.isEmpty()) {
+            return false;
+        }
+        String flattenedComponent = getPackageName() + "/" + className;
+        String shortComponent = getPackageName() + "/" + className.replace(getPackageName() + ".", ".");
+        for (String component : enabled.split(":")) {
+            if (component.equals(flattenedComponent) || component.equals(shortComponent)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

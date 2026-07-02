@@ -11,9 +11,17 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ExpenseNotificationListener extends NotificationListenerService {
     private static WeakReference<ExpenseNotificationListener> instance = new WeakReference<>(null);
+    // Keeps parsing and database writes off the process main thread, which also
+    // serializes them so a burst of notifications can't interleave.
+    private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
 
     public static int scanActive(Context context) {
         ExpenseNotificationListener listener = instance.get();
@@ -27,11 +35,6 @@ public class ExpenseNotificationListener extends NotificationListenerService {
         return instance.get() != null;
     }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-    }
-
     private boolean isWatched(String packageName, String title) {
         return ExpenseParser.isWatched(this, packageName, title);
     }
@@ -42,7 +45,7 @@ public class ExpenseNotificationListener extends NotificationListenerService {
         diagnostics(this).edit()
                 .putLong("last_connected_at", System.currentTimeMillis())
                 .apply();
-        scanActiveNotifications(this);
+        WORKER.execute(() -> scanActiveNotifications(this));
     }
 
     @Override
@@ -61,7 +64,7 @@ public class ExpenseNotificationListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        saveCandidateIfRelevant(this, sbn);
+        WORKER.execute(() -> saveCandidateIfRelevant(this, sbn));
     }
 
     private int scanActiveNotifications(Context context) {
@@ -115,32 +118,28 @@ public class ExpenseNotificationListener extends NotificationListenerService {
         String tag = sbn.getTag();
         String ticker = notification.tickerText == null ? "" : notification.tickerText.toString();
         String body = join(text, bigText, subText, ticker, tag);
-        diagnostics(context).edit()
+
+        SharedPreferences.Editor diagnostics = diagnostics(context).edit()
                 .putLong("last_watched_at", System.currentTimeMillis())
                 .putString("last_watched_package", sbn.getPackageName())
                 .putString("last_watched_title", title)
-                .putString("last_watched_body", body)
-                .apply();
+                .putString("last_watched_body", body);
 
         Candidate candidate = ExpenseParser.parse(
                 context,
                 sbn.getPackageName(),
                 appName(context, sbn.getPackageName()),
-                dedupeKey(sbn, body),
+                dedupeKey(sbn.getKey(), body),
                 sbn.getPostTime(),
                 title.isEmpty() ? firstNonEmpty(ticker, tag) : title,
                 body);
         if (candidate == null) {
-            diagnostics(context).edit()
-                    .putString("last_result", "Parser rejected watched notification")
-                    .apply();
+            diagnostics.putString("last_result", "Parser rejected watched notification").apply();
             return false;
         }
 
-        long inserted = new CandidateDb(context).insertIfNew(candidate);
-        diagnostics(context).edit()
-                .putString("last_result", inserted == -1 ? "Duplicate candidate ignored" : "Candidate saved")
-                .apply();
+        long inserted = CandidateDb.getInstance(context).insertIfNew(candidate);
+        diagnostics.putString("last_result", inserted == -1 ? "Duplicate candidate ignored" : "Candidate saved").apply();
         return inserted != -1;
     }
 
@@ -152,8 +151,24 @@ public class ExpenseNotificationListener extends NotificationListenerService {
     // separate candidate, while re-scanning the same still-active notification (same key
     // + same body) still dedupes. Per-notification sources like Revolut keep a unique
     // sbn.getKey() per transaction, so two identical charges remain two candidates.
-    private static String dedupeKey(StatusBarNotification sbn, String body) {
-        return sbn.getKey() + "#" + Integer.toHexString((body == null ? "" : body).hashCode());
+    // SHA-256 (not String.hashCode) so two different SMS can't collide into one key
+    // and silently drop an expense.
+    static String dedupeKey(String sbnKey, String body) {
+        return sbnKey + "#" + sha256(body == null ? "" : body);
+    }
+
+    private static String sha256(String text) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(Character.forDigit((b >> 4) & 0xf, 16)).append(Character.forDigit(b & 0xf, 16));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            // Every Android ships SHA-256; keep a deterministic fallback anyway.
+            return Integer.toHexString(text.hashCode());
+        }
     }
 
     private static String titleOf(StatusBarNotification sbn) {

@@ -3,6 +3,12 @@ package dev.fanis.expensenotification;
 import java.math.BigDecimal;
 
 final class Candidate {
+    static final String STATUS_NEW = "NEW";
+    static final String STATUS_SKIPPED = "SKIPPED";
+    static final String STATUS_PROCESSED = "PROCESSED";
+    static final String TYPE_EXPENSE = "EXPENSE";
+    static final String TYPE_INCOME = "INCOME";
+
     long id;
     String notificationKey;
     String packageName;
@@ -17,12 +23,12 @@ final class Candidate {
     String suggestedCategory;
     String suggestedPaymentMethod;
     String note = "";
-    String transactionType = "EXPENSE";
+    String transactionType = TYPE_EXPENSE;
     long postedAt;
     String status;
 
     boolean isIncome() {
-        return "INCOME".equals(transactionType);
+        return TYPE_INCOME.equals(transactionType);
     }
 
     boolean hasAmount() {

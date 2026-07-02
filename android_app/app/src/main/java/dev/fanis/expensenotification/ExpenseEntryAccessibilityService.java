@@ -1,6 +1,7 @@
 package dev.fanis.expensenotification;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.accessibility.AccessibilityEvent;
@@ -25,7 +26,51 @@ public class ExpenseEntryAccessibilityService extends AccessibilityService {
     private static final String STATE_AWAIT_SAVE = "AWAIT_SAVE";
     private static final String STATE_FILLED = "FILLED";
 
+    // A fill the user abandoned must not leave the service inspecting the target
+    // app's windows forever; after this long any pending state is discarded.
+    private static final long STATE_TTL_MS = 15 * 60 * 1000L;
+
     private long lastAttemptAt;
+    // Strong reference: SharedPreferences only holds listeners weakly.
+    private SharedPreferences.OnSharedPreferenceChangeListener targetPackageListener;
+
+    // Restrict event delivery to the configured output app. Without this filter the
+    // service receives window/content events from every app on the device and pays
+    // the cross-process wakeup cost for each; with it the system drops everything
+    // else before it reaches us. Re-applied whenever the target package changes.
+    @Override
+    protected void onServiceConnected() {
+        super.onServiceConnected();
+        applyPackageFilter();
+        targetPackageListener = (prefs, key) -> {
+            if ("target_package".equals(key)) {
+                applyPackageFilter();
+            }
+        };
+        getSharedPreferences("automation", MODE_PRIVATE)
+                .registerOnSharedPreferenceChangeListener(targetPackageListener);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (targetPackageListener != null) {
+            getSharedPreferences("automation", MODE_PRIVATE)
+                    .unregisterOnSharedPreferenceChangeListener(targetPackageListener);
+            targetPackageListener = null;
+        }
+        super.onDestroy();
+    }
+
+    private void applyPackageFilter() {
+        AccessibilityServiceInfo info = getServiceInfo();
+        if (info == null) {
+            return;
+        }
+        info.packageNames = new String[]{
+                getSharedPreferences("automation", MODE_PRIVATE)
+                        .getString("target_package", EXPENSE_MANAGER_PACKAGE)};
+        setServiceInfo(info);
+    }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
@@ -39,6 +84,10 @@ public class ExpenseEntryAccessibilityService extends AccessibilityService {
         }
 
         String state = prefs.getString("state", "");
+        if (isExpired(prefs, state)) {
+            prefs.edit().putString("state", "").apply();
+            return;
+        }
 
         // While waiting for the user to finish, keep a live copy of the payee they
         // have chosen, and commit the alias both when they tap OK and (as a fallback,
@@ -101,7 +150,16 @@ public class ExpenseEntryAccessibilityService extends AccessibilityService {
         prefs.edit()
                 .putString("prefill_text", prefillText)
                 .putString("state", STATE_AWAIT_SAVE)
+                .putLong("state_at", System.currentTimeMillis())
                 .apply();
+    }
+
+    private static boolean isExpired(SharedPreferences prefs, String state) {
+        if (!STATE_PENDING.equals(state) && !STATE_AWAIT_SAVE.equals(state)) {
+            return false;
+        }
+        long stateAt = prefs.getLong("state_at", 0L);
+        return stateAt > 0 && System.currentTimeMillis() - stateAt > STATE_TTL_MS;
     }
 
     private boolean isSaveClick(AccessibilityEvent event) {

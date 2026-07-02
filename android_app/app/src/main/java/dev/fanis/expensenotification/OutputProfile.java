@@ -7,12 +7,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -101,21 +97,23 @@ final class OutputProfile {
     }
 
     private static OutputProfile load(Context context) throws IOException, JSONException {
+        // The bundled assets are the single source of defaults; user files override
+        // assets of the same name and hidden bundled outputs are excluded, so
+        // deleting one from the Config screen really removes it.
         LinkedHashMap<String, String> outputs = new LinkedHashMap<>();
-        outputs.put("expense-manager.json", defaultJson());
 
         AssetManager assets = context.getAssets();
         try {
             String[] names = assets.list("outputs");
             if (names != null) {
                 ArrayList<String> sorted = new ArrayList<>();
-                    Collections.addAll(sorted, names);
-                    Collections.sort(sorted);
-                    for (String name : sorted) {
-                        if (name.endsWith(".json") && !ConfigHides.isHidden(context, "outputs", name)) {
-                            outputs.put(name, readAsset(assets, "outputs/" + name));
-                        }
+                Collections.addAll(sorted, names);
+                Collections.sort(sorted);
+                for (String name : sorted) {
+                    if (name.endsWith(".json") && !ConfigHides.isHidden(context, "outputs", name)) {
+                        outputs.put(name, IoUtil.readAsset(assets, "outputs/" + name));
                     }
+                }
             }
         } catch (IOException ignored) {
         }
@@ -128,7 +126,7 @@ final class OutputProfile {
             Collections.sort(sorted, (a, b) -> a.getName().compareTo(b.getName()));
             for (File file : sorted) {
                 if (file.isFile() && file.getName().endsWith(".json")) {
-                    outputs.put(file.getName(), readFile(file));
+                    outputs.put(file.getName(), IoUtil.readFile(file));
                 }
             }
         }
@@ -247,42 +245,4 @@ final class OutputProfile {
                 + "Accessibility save ids: " + (saveIds.isEmpty() ? "-" : saveIdsPrefValue());
     }
 
-    private static String readAsset(AssetManager assets, String name) throws IOException {
-        try (InputStream in = assets.open(name)) {
-            return readAll(in);
-        }
-    }
-
-    private static String readFile(File file) throws IOException {
-        try (InputStream in = new FileInputStream(file)) {
-            return readAll(in);
-        }
-    }
-
-    private static String readAll(InputStream in) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buffer = new byte[4096];
-        int read;
-        while ((read = in.read(buffer)) != -1) {
-            out.write(buffer, 0, read);
-        }
-        return out.toString(StandardCharsets.UTF_8.name());
-    }
-
-    private static String defaultJson() {
-        return "{"
-                + "\"id\":\"expense-manager\","
-                + "\"displayName\":\"Bishinews Expense Manager\","
-                + "\"package\":\"com.expensemanager.pro\","
-                + "\"activity\":\"com.expensemanager.ExpenseNewTransaction\","
-                + "\"constantExtras\":{\"fromWhere\":\"widgetAdd\"},"
-                + "\"fieldMap\":{\"amount\":\"amount\",\"payee\":\"payee\",\"paymentMethod\":\"paymentMethod\","
-                + "\"category\":\"category\",\"description\":\"description\",\"date\":\"date\"},"
-                + "\"dateFormat\":\"yyyy-MM-dd\","
-                + "\"accessibility\":{\"amountId\":\"com.expensemanager.pro:id/expenseAmountInput\","
-                + "\"payeeId\":\"com.expensemanager.pro:id/payee\","
-                + "\"descriptionId\":\"com.expensemanager.pro:id/expenseDescriptionInput\","
-                + "\"saveIds\":[\"com.expensemanager.pro:id/expenseSave\",\"com.expensemanager.pro:id/expenseSaveNew\"]}"
-                + "}";
-    }
 }

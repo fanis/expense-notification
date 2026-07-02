@@ -10,11 +10,16 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 
 public class ExpenseParserTest {
@@ -56,8 +61,24 @@ public class ExpenseParserTest {
         return b.toString();
     }
 
+    // The bundled asset configs are the single source of truth; the JVM tests run
+    // the exact JSON files that ship in the APK.
+    private static Candidate parseAssets(String packageName, String appName, long postedAt, String title, String body) {
+        try {
+            return ExpenseParser.parseConfigured(
+                    readAsset("global.json"), readAllAssetInputs(),
+                    packageName, appName, "key", postedAt, title, body);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
     private static Candidate parseSms(String sender, String body) {
-        return ExpenseParser.parse(SMS_PACKAGE, SMS_APP, "key", 0L, sender, body);
+        return parseAssets(SMS_PACKAGE, SMS_APP, 0L, sender, body);
+    }
+
+    private static Candidate parseRevolut(String title, String body) {
+        return parseAssets("com.revolut.business", "Business", 0L, title, body);
     }
 
     private static String formatDay(long postedAt) {
@@ -65,9 +86,7 @@ public class ExpenseParserTest {
     }
 
     @Test
-    public void bundledLocalBankDefaultsAreRegexConfigsNotLegacyHandlers() throws Exception {
-        assertRegexOnlyBankConfig(new JSONObject(ExpenseParser.defaultInputJson("bank-of-cyprus.json")));
-        assertRegexOnlyBankConfig(new JSONObject(ExpenseParser.defaultInputJson("eurobank.json")));
+    public void bundledLocalBankConfigsAreRegexConfigsNotLegacyHandlers() throws Exception {
         assertRegexOnlyBankConfig(new JSONObject(readAssetInput("bank-of-cyprus.json")));
         assertRegexOnlyBankConfig(new JSONObject(readAssetInput("eurobank.json")));
     }
@@ -105,12 +124,33 @@ public class ExpenseParserTest {
         assertTrue("Expected at least one regex rule in " + config.optString("id"), sawRegex);
     }
 
-    private static String readAssetInput(String name) throws Exception {
-        Path path = Path.of("src", "main", "assets", "inputs", name);
+    private static Path assetsDir() {
+        Path path = Path.of("src", "main", "assets");
         if (!Files.exists(path)) {
-            path = Path.of("app", "src", "main", "assets", "inputs", name);
+            path = Path.of("app", "src", "main", "assets");
         }
-        return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+        return path;
+    }
+
+    private static String readAsset(String name) throws IOException {
+        return new String(Files.readAllBytes(assetsDir().resolve(name)), StandardCharsets.UTF_8);
+    }
+
+    private static String readAssetInput(String name) throws IOException {
+        return readAsset("inputs/" + name);
+    }
+
+    private static LinkedHashMap<String, String> readAllAssetInputs() throws IOException {
+        LinkedHashMap<String, String> inputs = new LinkedHashMap<>();
+        List<Path> files = new ArrayList<>();
+        try (java.util.stream.Stream<Path> stream = Files.list(assetsDir().resolve("inputs"))) {
+            stream.filter(p -> p.getFileName().toString().endsWith(".json")).forEach(files::add);
+        }
+        Collections.sort(files);
+        for (Path file : files) {
+            inputs.put(file.getFileName().toString(), new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+        }
+        return inputs;
     }
 
     @Test
@@ -118,8 +158,8 @@ public class ExpenseParserTest {
         // Real Google Wallet notification: title is the merchant, body names the
         // underlying card. The raw "Revolut Visa ..NNNN" descriptor is not a kept
         // payment method, so it must fall back to the default card.
-        Candidate c = ExpenseParser.parse(
-                "com.google.android.apps.walletnfcrel", "Google Wallet", "k", 0L,
+        Candidate c = parseAssets(
+                "com.google.android.apps.walletnfcrel", "Google Wallet", 0L,
                 "SAMPLE BILLER",
                 "€44.09 with Revolut Visa ••0000\nView your purchase\n100000000");
         assertNotNull(c);
@@ -132,8 +172,8 @@ public class ExpenseParserTest {
     @Test
     public void revolutSpendBecomesMerchantAndCreditCard() {
         // Real Revolut notification: title is the merchant, body is "You spent ...".
-        Candidate c = ExpenseParser.parse(
-                "com.revolut.revolut", "Revolut", "k", 0L,
+        Candidate c = parseAssets(
+                "com.revolut.revolut", "Revolut", 0L,
                 "SAMPLE UTILITY",
                 "You spent €33.95\nEUR balance: €543.21");
         assertNotNull(c);
@@ -288,7 +328,7 @@ public class ExpenseParserTest {
         // The SMS arrived (notification posted) far later than the transaction; the
         // expense must be dated to the date written in the SMS, not the arrival time.
         long arrivedNov2023 = 1_700_000_000_000L;
-        Candidate c = ExpenseParser.parse(SMS_PACKAGE, SMS_APP, "key", arrivedNov2023, "BOC Message",
+        Candidate c = parseAssets(SMS_PACKAGE, SMS_APP, arrivedNov2023, "BOC Message",
                 "Η ΚΑΡΤΑ ΣΑΣ VISA*1234 ΕΧΕΙ ΧΡΗΣΙΜΟΠΟΙΗΘΕΙ ΣΤΟ SAMPLE STORE "
                         + "ΣΤΙΣ 26/05/2026, 20:17 ΓΙΑ ΤΟ ΕΝΔΕΙΚΤΙΚΟ ΠΟΣΟ €15,30.");
         assertNotNull(c);
@@ -298,7 +338,7 @@ public class ExpenseParserTest {
     @Test
     public void datesIncomingCreditToTwoDigitYearDate() {
         long arrived = 1_700_000_000_000L;
-        Candidate c = ExpenseParser.parse(SMS_PACKAGE, SMS_APP, "key", arrived, "BOC Message",
+        Candidate c = parseAssets(SMS_PACKAGE, SMS_APP, arrived, "BOC Message",
                 "The a/c XXXX000000 (CURRENT) was credited with the amount of "
                         + "EUR 300,00 on 23/05/26 12:55 From: SAMPLE PAYER Details: SAMPLE NOTE");
         assertNotNull(c);
@@ -310,7 +350,7 @@ public class ExpenseParserTest {
         // Revolut spend notifications carry no transaction date, so the expense keeps
         // the notification's post time.
         long arrived = 1_700_000_000_000L;
-        Candidate c = ExpenseParser.parse("com.revolut.revolut", "Revolut", "k", arrived,
+        Candidate c = parseAssets("com.revolut.revolut", "Revolut", arrived,
                 "SAMPLE UTILITY", "You spent €33.95\nEUR balance: €543.21");
         assertNotNull(c);
         assertEquals(arrived, c.postedAt);
@@ -392,10 +432,6 @@ public class ExpenseParserTest {
         }
     }
 
-    private static Candidate parseRevolut(String title, String body) {
-        return ExpenseParser.parse("com.revolut.business", "Business", "k", 0L, title, body);
-    }
-
     @Test
     public void rejectsPendingApprovalPrompt() {
         // The 3DS approval request that precedes the real "successful" notification.
@@ -425,6 +461,17 @@ public class ExpenseParserTest {
     }
 
     @Test
+    public void dropZeroAmountFalseKeepsZeroCharges() throws Exception {
+        // The global dropZeroAmount switch must actually control the zero filter.
+        Candidate c = ExpenseParser.parseConfigured(
+                "{\"dropZeroAmount\":false}", readAllAssetInputs(),
+                "com.revolut.revolut", "Revolut", "k", 0L,
+                "Some Shop", "You spent €0\nEUR balance: €10.00");
+        assertNotNull(c);
+        assertEquals("0", c.amount);
+    }
+
+    @Test
     public void keepsCompletedRevolutPayment() {
         // The genuine completion must still pass after the new filters.
         Candidate c = parseRevolut(
@@ -433,5 +480,33 @@ public class ExpenseParserTest {
         assertNotNull(c);
         assertEquals("112.14", c.amount);
         assertEquals("SAMPLE UTILITY", c.merchant);
+    }
+
+    // ---- Amount normalization: European/English grouping and decimals. ----
+
+    @Test
+    public void normalizesGroupedThousandsWithoutDecimals() {
+        assertEquals("1234", ExpenseParser.normalizeAmount("1.234"));
+        assertEquals("1234", ExpenseParser.normalizeAmount("1,234"));
+        assertEquals("1234567", ExpenseParser.normalizeAmount("1.234.567"));
+    }
+
+    @Test
+    public void normalizesDecimalsAndMixedSeparators() {
+        assertEquals("1234.56", ExpenseParser.normalizeAmount("1.234,56"));
+        assertEquals("1234.56", ExpenseParser.normalizeAmount("1,234.56"));
+        assertEquals("300.00", ExpenseParser.normalizeAmount("300,00"));
+        assertEquals("12.34", ExpenseParser.normalizeAmount("12.34"));
+        assertEquals("3.5", ExpenseParser.normalizeAmount("3,5"));
+    }
+
+    @Test
+    public void groupedThousandsWithoutDecimalsParseAsWholeAmount() {
+        // "€1.234" is one thousand two hundred thirty four euros, not 1.23.
+        Candidate c = parseAssets("com.revolut.revolut", "Revolut", 0L,
+                "SAMPLE STORE", "You spent €1.234\nEUR balance: €5.678,90");
+        assertNotNull(c);
+        assertEquals("1234", c.amount);
+        assertEquals("EUR", c.currency);
     }
 }
