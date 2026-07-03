@@ -13,6 +13,7 @@
 - Prune processed/skipped candidates older than 90 days so the queue and database stop growing forever; unreviewed candidates are kept indefinitely.
 - Skip a parser rule whose regex does not compile instead of crashing the notification listener.
 - Run the unit-test suite in CI on every push and pull request.
+- Add a "Cut Release" GitHub Actions workflow: releases can now be triggered from the Actions tab (choose patch/minor/major); it bumps the version, folds the changelog, tags, runs the tests, builds the signed APK, and publishes the GitHub Release — the server-side equivalent of `scripts/release.sh --push`.
 
 ## v1.0.1 - 2026-06-30
 - Fix bank SMS after the first being silently dropped: messaging apps (e.g. Textra) post every SMS from one sender under a single conversation notification, so every Bank of Cyprus SMS shared one notification key and collided on the queue's unique-key constraint after the first capture. The dedupe key now folds in the message body, so each distinct SMS is queued while re-scanning the same still-active notification still dedupes. Card-app notifications (Revolut, Google Wallet) keep a unique key per transaction, so identical charges still queue separately.
