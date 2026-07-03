@@ -28,14 +28,6 @@ final class ConfigHides {
     }
 
     private static File marker(Context context, String dirName, String name) {
-        return new File(new File(context.getFilesDir(), dirName), clean(name) + ".hidden");
-    }
-
-    private static String clean(String name) {
-        String cleaned = name == null ? "config.json" : name.trim().replaceAll("[\\\\/:*?\"<>|]", "-");
-        if (cleaned.isEmpty()) {
-            cleaned = "config.json";
-        }
-        return cleaned.endsWith(".json") ? cleaned : cleaned + ".json";
+        return new File(new File(context.getFilesDir(), dirName), ConfigNames.cleanJsonName(name) + ".hidden");
     }
 }

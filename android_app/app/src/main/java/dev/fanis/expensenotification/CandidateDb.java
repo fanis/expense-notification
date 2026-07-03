@@ -11,10 +11,32 @@ import java.util.List;
 
 final class CandidateDb extends SQLiteOpenHelper {
     private static final String DB_NAME = "expense_candidates.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
+    // Settled (processed/skipped) candidates older than this are pruned so the
+    // database and the review screen don't grow forever. NEW candidates are kept
+    // indefinitely: they still need the user's decision.
+    static final long SETTLED_RETENTION_MS = 90L * 24 * 60 * 60 * 1000;
+
+    private static CandidateDb instance;
+
     private final Context appContext;
 
-    CandidateDb(Context context) {
+    static synchronized CandidateDb getInstance(Context context) {
+        if (instance == null) {
+            instance = new CandidateDb(context.getApplicationContext());
+        }
+        return instance;
+    }
+
+    /** Tests run against per-test data directories; lets them drop the cached helper. */
+    static synchronized void resetInstanceForTesting() {
+        if (instance != null) {
+            instance.close();
+            instance = null;
+        }
+    }
+
+    private CandidateDb(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
         this.appContext = context.getApplicationContext();
     }
@@ -39,7 +61,8 @@ final class CandidateDb extends SQLiteOpenHelper {
                 "transaction_type TEXT NOT NULL DEFAULT 'EXPENSE'," +
                 "posted_at INTEGER NOT NULL," +
                 "status TEXT NOT NULL DEFAULT 'NEW'," +
-                "created_at INTEGER NOT NULL)");
+                "created_at INTEGER NOT NULL," +
+                "parsed_revision INTEGER NOT NULL DEFAULT -1)");
     }
 
     @Override
@@ -52,9 +75,14 @@ final class CandidateDb extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE candidates ADD COLUMN note TEXT NOT NULL DEFAULT ''");
             db.execSQL("ALTER TABLE candidates ADD COLUMN transaction_type TEXT NOT NULL DEFAULT 'EXPENSE'");
         }
+        if (oldVersion < 4) {
+            // -1 marks rows parsed by an unknown (pre-column) config; they reparse once.
+            db.execSQL("ALTER TABLE candidates ADD COLUMN parsed_revision INTEGER NOT NULL DEFAULT -1");
+        }
     }
 
     long insertIfNew(Candidate candidate) {
+        pruneSettled();
         ContentValues values = new ContentValues();
         values.put("notification_key", candidate.notificationKey);
         values.put("package_name", candidate.packageName);
@@ -69,19 +97,18 @@ final class CandidateDb extends SQLiteOpenHelper {
         values.put("suggested_category", value(candidate.suggestedCategory));
         values.put("suggested_payment_method", value(candidate.suggestedPaymentMethod));
         values.put("note", value(candidate.note));
-        values.put("transaction_type", value(candidate.transactionType, "EXPENSE"));
+        values.put("transaction_type", value(candidate.transactionType, Candidate.TYPE_EXPENSE));
         values.put("posted_at", candidate.postedAt);
-        values.put("status", value(candidate.status, "NEW"));
+        values.put("status", value(candidate.status, Candidate.STATUS_NEW));
         values.put("created_at", System.currentTimeMillis());
+        values.put("parsed_revision", ConfigRevision.current(appContext));
         return getWritableDatabase().insertWithOnConflict("candidates", null, values, SQLiteDatabase.CONFLICT_IGNORE);
-    }
-
-    List<Candidate> listNew() {
-        return queryByStatus("NEW");
     }
 
     List<Candidate> listAll() {
         ArrayList<Candidate> items = new ArrayList<>();
+        ArrayList<Candidate> stale = new ArrayList<>();
+        long currentRevision = ConfigRevision.current(appContext);
         try (Cursor cursor = getReadableDatabase().query(
                 "candidates",
                 null,
@@ -90,9 +117,18 @@ final class CandidateDb extends SQLiteOpenHelper {
                 null,
                 null,
                 "posted_at DESC, id DESC")) {
+            int revisionIndex = cursor.getColumnIndex("parsed_revision");
             while (cursor.moveToNext()) {
-                items.add(fromCursor(cursor));
+                Candidate candidate = fromCursor(cursor);
+                items.add(candidate);
+                long parsedRevision = revisionIndex < 0 ? -1 : cursor.getLong(revisionIndex);
+                if (parsedRevision != currentRevision) {
+                    stale.add(candidate);
+                }
             }
+        }
+        if (!stale.isEmpty()) {
+            reparseStale(stale, currentRevision);
         }
         return items;
     }
@@ -107,21 +143,62 @@ final class CandidateDb extends SQLiteOpenHelper {
         return getWritableDatabase().delete("candidates", null, null);
     }
 
-    private List<Candidate> queryByStatus(String status) {
-        ArrayList<Candidate> items = new ArrayList<>();
-        try (Cursor cursor = getReadableDatabase().query(
+    int pruneSettled() {
+        long cutoff = System.currentTimeMillis() - SETTLED_RETENTION_MS;
+        return getWritableDatabase().delete(
                 "candidates",
-                null,
-                "status = ?",
-                new String[]{status},
-                null,
-                null,
-                "posted_at DESC, id DESC")) {
-            while (cursor.moveToNext()) {
-                items.add(fromCursor(cursor));
+                "status != ? AND posted_at < ?",
+                new String[]{Candidate.STATUS_NEW, String.valueOf(cutoff)});
+    }
+
+    // Re-derives parsed fields (payee, payment method, note, category, amount,
+    // transaction type) from the stored SMS so existing candidates reflect the
+    // current parser config. Identity (id, notification key, raw title/body) and
+    // workflow status are preserved. Runs only for rows whose parsed_revision is
+    // behind the current config revision, and writes the result back so the work
+    // happens once per config change instead of on every read.
+    private void reparseStale(List<Candidate> stale, long currentRevision) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (Candidate candidate : stale) {
+                Candidate reparsed = ExpenseParser.parse(
+                        appContext,
+                        candidate.packageName, candidate.appName, candidate.notificationKey,
+                        candidate.postedAt, candidate.title, candidate.text);
+                ContentValues values = new ContentValues();
+                if (reparsed != null) {
+                    candidate.merchant = reparsed.merchant;
+                    candidate.amount = reparsed.amount;
+                    candidate.currency = reparsed.currency;
+                    candidate.originalAmount = reparsed.originalAmount;
+                    candidate.originalCurrency = reparsed.originalCurrency;
+                    candidate.suggestedCategory = reparsed.suggestedCategory;
+                    candidate.suggestedPaymentMethod = reparsed.suggestedPaymentMethod;
+                    candidate.note = reparsed.note;
+                    candidate.transactionType = reparsed.transactionType;
+                    candidate.postedAt = reparsed.postedAt;
+                    values.put("merchant", value(candidate.merchant));
+                    values.put("amount", value(candidate.amount));
+                    values.put("currency", value(candidate.currency));
+                    values.put("original_amount", value(candidate.originalAmount));
+                    values.put("original_currency", value(candidate.originalCurrency));
+                    values.put("suggested_category", value(candidate.suggestedCategory));
+                    values.put("suggested_payment_method", value(candidate.suggestedPaymentMethod));
+                    values.put("note", value(candidate.note));
+                    values.put("transaction_type", value(candidate.transactionType, Candidate.TYPE_EXPENSE));
+                    values.put("posted_at", candidate.postedAt);
+                }
+                // A candidate the current config no longer matches keeps its stored
+                // fields; the revision still advances so it isn't retried until the
+                // config changes again.
+                values.put("parsed_revision", currentRevision);
+                db.update("candidates", values, "id = ?", new String[]{String.valueOf(candidate.id)});
             }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
         }
-        return items;
     }
 
     private Candidate fromCursor(Cursor cursor) {
@@ -141,34 +218,10 @@ final class CandidateDb extends SQLiteOpenHelper {
         candidate.suggestedPaymentMethod = cursor.getString(cursor.getColumnIndexOrThrow("suggested_payment_method"));
         candidate.note = optionalString(cursor, "note");
         String type = optionalString(cursor, "transaction_type");
-        candidate.transactionType = type.isEmpty() ? "EXPENSE" : type;
+        candidate.transactionType = type.isEmpty() ? Candidate.TYPE_EXPENSE : type;
         candidate.postedAt = cursor.getLong(cursor.getColumnIndexOrThrow("posted_at"));
         candidate.status = cursor.getString(cursor.getColumnIndexOrThrow("status"));
-        reparseFromStoredSms(candidate);
         return candidate;
-    }
-
-    // Re-derive parsed fields from the stored SMS so existing candidates reflect the
-    // current parser (payee, payment method, note, category, amount, transaction type).
-    // Identity (id, notification key, raw title/body) and workflow status are preserved.
-    private void reparseFromStoredSms(Candidate candidate) {
-        Candidate reparsed = ExpenseParser.parse(
-                appContext,
-                candidate.packageName, candidate.appName, candidate.notificationKey,
-                candidate.postedAt, candidate.title, candidate.text);
-        if (reparsed == null) {
-            return;
-        }
-        candidate.merchant = reparsed.merchant;
-        candidate.amount = reparsed.amount;
-        candidate.currency = reparsed.currency;
-        candidate.originalAmount = reparsed.originalAmount;
-        candidate.originalCurrency = reparsed.originalCurrency;
-        candidate.suggestedCategory = reparsed.suggestedCategory;
-        candidate.suggestedPaymentMethod = reparsed.suggestedPaymentMethod;
-        candidate.note = reparsed.note;
-        candidate.transactionType = reparsed.transactionType;
-        candidate.postedAt = reparsed.postedAt;
     }
 
     private static String value(String text) {

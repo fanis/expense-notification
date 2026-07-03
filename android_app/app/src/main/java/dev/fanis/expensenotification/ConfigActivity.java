@@ -18,9 +18,7 @@ import android.widget.Toast;
 
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -432,9 +430,9 @@ public class ConfigActivity extends BaseActivity {
         File user = userFile(dirName, name);
         try {
             if (user.exists()) {
-                return decodeUnicodeEscapes(readFile(user));
+                return ConfigNames.decodeUnicodeEscapes(IoUtil.readFile(user));
             }
-            return decodeUnicodeEscapes(readAsset(dirName + "/" + name));
+            return ConfigNames.decodeUnicodeEscapes(IoUtil.readAsset(getAssets(), dirName + "/" + name));
         } catch (IOException e) {
             return "{}";
         }
@@ -483,11 +481,7 @@ public class ConfigActivity extends BaseActivity {
     }
 
     private String cleanJsonName(String name) {
-        String cleaned = name == null ? "config.json" : name.trim().replaceAll("[\\\\/:*?\"<>|]", "-");
-        if (cleaned.isEmpty()) {
-            cleaned = "config.json";
-        }
-        return cleaned.endsWith(".json") ? cleaned : cleaned + ".json";
+        return ConfigNames.cleanJsonName(name);
     }
 
     private String singular(String dirName) {
@@ -531,49 +525,7 @@ public class ConfigActivity extends BaseActivity {
 
     private String readUri(Uri uri) throws IOException {
         try (InputStream in = getContentResolver().openInputStream(uri)) {
-            return in == null ? "" : readAll(in);
+            return in == null ? "" : IoUtil.readAll(in);
         }
-    }
-
-    private String readAsset(String name) throws IOException {
-        try (InputStream in = getAssets().open(name)) {
-            return readAll(in);
-        }
-    }
-
-    private String readFile(File file) throws IOException {
-        try (InputStream in = new FileInputStream(file)) {
-            return readAll(in);
-        }
-    }
-
-    private String readAll(InputStream in) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buffer = new byte[4096];
-        int read;
-        while ((read = in.read(buffer)) != -1) {
-            out.write(buffer, 0, read);
-        }
-        return out.toString(StandardCharsets.UTF_8.name());
-    }
-
-    private String decodeUnicodeEscapes(String text) {
-        if (text == null || text.indexOf("\\u") < 0) {
-            return text;
-        }
-        StringBuilder out = new StringBuilder(text.length());
-        for (int i = 0; i < text.length(); i++) {
-            if (i + 5 < text.length() && text.charAt(i) == '\\' && text.charAt(i + 1) == 'u') {
-                String hex = text.substring(i + 2, i + 6);
-                try {
-                    out.append((char) Integer.parseInt(hex, 16));
-                    i += 5;
-                    continue;
-                } catch (NumberFormatException ignored) {
-                }
-            }
-            out.append(text.charAt(i));
-        }
-        return out.toString();
     }
 }

@@ -1,6 +1,7 @@
 package dev.fanis.expensenotification;
 
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -10,27 +11,30 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends BaseActivity {
-    private static final String APP_PACKAGE = "dev.fanis.expensenotification";
-    private static final String NOTIFICATION_LISTENER = APP_PACKAGE + "/dev.fanis.expensenotification.ExpenseNotificationListener";
-    private static final String ACCESSIBILITY_SERVICE = APP_PACKAGE + "/dev.fanis.expensenotification.ExpenseEntryAccessibilityService";
 
     private CandidateDb db;
     private LinearLayout setupActions;
     private LinearLayout list;
     private TextView status;
+    // Candidate loading runs the reparse-on-config-change pass, so keep it off the
+    // UI thread; single-threaded so a stale refresh can't overtake a newer one.
+    private final ExecutorService loader = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        db = new CandidateDb(this);
+        db = CandidateDb.getInstance(this);
         // Keep the notification listener revived if the system unbinds or kills it.
         ListenerWatchdogJob.schedule(this);
         setContentView(buildUi());
@@ -43,6 +47,12 @@ public class MainActivity extends BaseActivity {
         if (list != null) {
             refresh();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        loader.shutdown();
     }
 
     @Override
@@ -73,8 +83,18 @@ public class MainActivity extends BaseActivity {
 
     private void refresh() {
         renderSetupActions();
+        loader.execute(() -> {
+            List<Candidate> candidates = db.listAll();
+            runOnUiThread(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    renderList(candidates);
+                }
+            });
+        });
+    }
+
+    private void renderList(List<Candidate> candidates) {
         list.removeAllViews();
-        List<Candidate> candidates = db.listAll();
         status.setText(candidates.size() + " captured notification(s). New payment notifications are captured automatically.");
         if (candidates.isEmpty()) {
             LinearLayout emptyCard = new LinearLayout(this);
@@ -154,8 +174,10 @@ public class MainActivity extends BaseActivity {
                         " - " + emptyDash(candidate.suggestedCategory)));
         card.addView(bodyText("From " + emptyDash(candidate.appName)));
         card.addView(bodyText(DateFormat.getDateTimeInstance().format(new Date(candidate.postedAt))));
-        if ("SKIPPED".equals(candidate.status) || "PROCESSED".equals(candidate.status)) {
-            TextView statusLabel = bodyText(statusLabel(candidate.status));
+        boolean skipped = Candidate.STATUS_SKIPPED.equals(candidate.status);
+        boolean processed = Candidate.STATUS_PROCESSED.equals(candidate.status);
+        if (skipped || processed) {
+            TextView statusLabel = bodyText(processed ? "Processed" : "Skipped");
             statusLabel.setTextSize(13);
             statusLabel.setPadding(0, dp(6), 0, 0);
             card.addView(statusLabel);
@@ -166,17 +188,17 @@ public class MainActivity extends BaseActivity {
 
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        if ("SKIPPED".equals(candidate.status)) {
+        if (skipped) {
             Button unskip = secondaryButton("Unskip");
             unskip.setOnClickListener(v -> {
-                db.mark(candidate.id, "NEW");
+                db.mark(candidate.id, Candidate.STATUS_NEW);
                 refresh();
             });
             addCardAction(actions, unskip);
-        } else if ("PROCESSED".equals(candidate.status)) {
+        } else if (processed) {
             Button reopen = secondaryButton("Mark new");
             reopen.setOnClickListener(v -> {
-                db.mark(candidate.id, "NEW");
+                db.mark(candidate.id, Candidate.STATUS_NEW);
                 refresh();
             });
             addCardAction(actions, reopen);
@@ -186,23 +208,13 @@ public class MainActivity extends BaseActivity {
             addCardAction(actions, fill);
             Button skip = secondaryButton("Skip");
             skip.setOnClickListener(v -> {
-                db.mark(candidate.id, "SKIPPED");
+                db.mark(candidate.id, Candidate.STATUS_SKIPPED);
                 refresh();
             });
             addCardAction(actions, skip);
         }
         card.addView(actions);
         return card;
-    }
-
-    private String statusLabel(String status) {
-        if ("PROCESSED".equals(status)) {
-            return "Processed";
-        }
-        if ("SKIPPED".equals(status)) {
-            return "Skipped";
-        }
-        return status == null ? "" : status;
     }
 
     private void addCardAction(LinearLayout actions, Button button) {
@@ -252,8 +264,10 @@ public class MainActivity extends BaseActivity {
         // from the SMS, or the notification post time as a fallback), not now(): a
         // candidate may sit in the queue for days before the user fills it.
         String date = expenseDate(candidate.postedAt, profile.dateFormat);
-        fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date);
-        db.mark(candidate.id, "PROCESSED");
+        if (!fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date)) {
+            return;
+        }
+        db.mark(candidate.id, Candidate.STATUS_PROCESSED);
         refresh();
     }
 
@@ -269,7 +283,8 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private void fillExpenseManager(OutputProfile profile, String amount, String merchant, String paymentMethod, String description, String category, String date) {
+    /** Launches the output app's add-transaction form. Returns false when it can't be opened. */
+    private boolean fillExpenseManager(OutputProfile profile, String amount, String merchant, String paymentMethod, String description, String category, String date) {
         // Prefill the learned payee for this merchant when we have one; otherwise the
         // raw merchant. We keep the raw merchant separately so the accessibility
         // service can learn merchant -> payee from whatever the user finally selects.
@@ -283,10 +298,9 @@ public class MainActivity extends BaseActivity {
                 .putString("amount", amount)
                 .putString("merchant", merchant == null ? "" : merchant)
                 .putString("payee", prefillPayee)
-                .putString("payment_method", paymentMethod)
                 .putString("description", description)
-                .putString("pending_payee", "")
                 .putString("state", "PENDING")
+                .putLong("state_at", System.currentTimeMillis())
                 .apply();
         Intent intent = new Intent();
         intent.setClassName(profile.packageName, profile.activity);
@@ -311,7 +325,16 @@ public class MainActivity extends BaseActivity {
         if (date != null && !date.isEmpty()) {
             intent.putExtra(profile.dateExtra(), date);
         }
-        startActivity(intent);
+        try {
+            startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException | SecurityException e) {
+            // The output app is not installed (or its add-transaction screen moved);
+            // don't mark the candidate processed for a fill that never happened.
+            getSharedPreferences("automation", MODE_PRIVATE).edit().putString("state", "").apply();
+            Toast.makeText(this, "Could not open " + profile.displayName + ". Is it installed?", Toast.LENGTH_LONG).show();
+            return false;
+        }
     }
 
     private String displayAmountLine(Candidate candidate) {
@@ -324,29 +347,4 @@ public class MainActivity extends BaseActivity {
         }
         return candidate.amountLine() + " (was " + candidate.originalAmountLine() + ")";
     }
-
-    private boolean isNotificationListenerEnabled() {
-        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        return containsComponent(enabled, NOTIFICATION_LISTENER);
-    }
-
-    private boolean isAccessibilityServiceEnabled() {
-        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_accessibility_services");
-        return "1".equals(Settings.Secure.getString(getContentResolver(), "accessibility_enabled")) &&
-                containsComponent(enabled, ACCESSIBILITY_SERVICE);
-    }
-
-    private static boolean containsComponent(String enabled, String flattenedComponent) {
-        if (enabled == null || enabled.isEmpty()) {
-            return false;
-        }
-        String shortComponent = flattenedComponent.replace("/" + APP_PACKAGE + ".", "/.");
-        for (String component : enabled.split(":")) {
-            if (component.equals(flattenedComponent) || component.equals(shortComponent)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
 }

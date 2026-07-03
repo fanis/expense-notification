@@ -126,7 +126,7 @@ final class ConfigValidator {
                 result.error(prefix + " regex rule is missing pattern");
             } else {
                 try {
-                    Pattern.compile(pattern, flags(rule.optJSONArray("flags")));
+                    Pattern.compile(pattern, JsonValues.patternFlags(rule.optJSONArray("flags")));
                 } catch (PatternSyntaxException e) {
                     result.error(prefix + " regex does not compile: " + e.getDescription());
                 }
@@ -196,26 +196,6 @@ final class ConfigValidator {
         if (!allowed.contains(value)) {
             result.error(path + " has unknown value: " + value);
         }
-    }
-
-    private static int flags(JSONArray json) {
-        int flags = 0;
-        if (json == null) {
-            return flags;
-        }
-        for (int i = 0; i < json.length(); i++) {
-            String flag = json.optString(i);
-            if ("caseInsensitive".equals(flag)) {
-                flags |= Pattern.CASE_INSENSITIVE;
-            } else if ("unicodeCase".equals(flag)) {
-                flags |= Pattern.UNICODE_CASE;
-            } else if ("multiline".equals(flag)) {
-                flags |= Pattern.MULTILINE;
-            } else if ("dotall".equals(flag)) {
-                flags |= Pattern.DOTALL;
-            }
-        }
-        return flags;
     }
 
     private static Set<String> set(String... values) {

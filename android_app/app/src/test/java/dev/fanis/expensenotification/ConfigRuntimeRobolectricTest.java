@@ -2,6 +2,7 @@ package dev.fanis.expensenotification;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -57,6 +58,25 @@ public class ConfigRuntimeRobolectricTest {
         assertEquals("21.50", candidate.amount);
         assertEquals("LOCAL CAFE", candidate.merchant);
         assertEquals("Test Bank", candidate.suggestedPaymentMethod);
+    }
+
+    @Test
+    public void hiddenBundledInputStopsParsingUntilRestored() {
+        // Deleting (hiding) a bundled config from the Config screen must actually
+        // stop its notifications from being captured, and restoring must bring it back.
+        Context context = RuntimeEnvironment.getApplication();
+        String title = "SAMPLE UTILITY";
+        String body = "You spent €33.95\nEUR balance: €543.21";
+
+        assertNotNull(ExpenseParser.parse(context, "com.revolut.revolut", "Revolut", "k", 0L, title, body));
+
+        ConfigHides.hide(context, "inputs", "revolut.json");
+        ConfigRevision.bump(context);
+        assertNull(ExpenseParser.parse(context, "com.revolut.revolut", "Revolut", "k", 0L, title, body));
+
+        ConfigHides.restore(context, "inputs", "revolut.json");
+        ConfigRevision.bump(context);
+        assertNotNull(ExpenseParser.parse(context, "com.revolut.revolut", "Revolut", "k", 0L, title, body));
     }
 
     @Test

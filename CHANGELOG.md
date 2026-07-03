@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- Fix deleting a bundled parser/output config not actually disabling it: the parser kept a hardcoded copy of every bundled config and fell back to it even when the config was hidden. Bundled assets are now the single source of defaults, so Delete/Restore in the config UI really controls what parses.
+- Fix grouped-thousands amounts without decimals: `€1.234` (and `1,234`) now parse as 1234, not 1.23.
+- Fix a crash when tapping Fill or Open Expense Manager with the output app not installed; the candidate is no longer marked processed for a fill that never happened.
+- Make the `dropZeroAmount` global config switch actually control the zero-amount filter (it was previously always on).
+- Fix the config editor corrupting regex patterns that contain a literal backslash-u sequence when a config was opened and saved.
+- Ask for confirmation before "Clear local queue" deletes captured notifications.
+- Dedupe captures with a SHA-256 body hash instead of a 32-bit hash, removing the (tiny) chance of two different bank SMS colliding into one key and silently dropping an expense.
+- Performance: compile every parser regex once per config load instead of on each notification; re-parse stored candidates only when the parser config actually changes (and write the result back) instead of on every list read; run notification parsing/database writes and the review-queue load off the main thread; share one database connection instead of opening one per event.
+- Restrict the form-filling accessibility service to the configured output app via the system-side package filter (it previously woke up for events from every app), and expire an abandoned fill after 15 minutes.
+- Prune processed/skipped candidates older than 90 days so the queue and database stop growing forever; unreviewed candidates are kept indefinitely.
+- Skip a parser rule whose regex does not compile instead of crashing the notification listener.
+- Run the unit-test suite in CI on every push and pull request.
+- Add a "Cut Release" GitHub Actions workflow: releases can now be triggered from the Actions tab (choose patch/minor/major); it bumps the version, folds the changelog, tags, runs the tests, builds the signed APK, and publishes the GitHub Release — the server-side equivalent of `scripts/release.sh --push`.
 
 ## v1.0.1 - 2026-06-30
 - Fix bank SMS after the first being silently dropped: messaging apps (e.g. Textra) post every SMS from one sender under a single conversation notification, so every Bank of Cyprus SMS shared one notification key and collided on the queue's unique-key constraint after the first capture. The dedupe key now folds in the message body, so each distinct SMS is queued while re-scanning the same still-active notification still dedupes. Card-app notifications (Revolut, Google Wallet) keep a unique key per transaction, so identical charges still queue separately.

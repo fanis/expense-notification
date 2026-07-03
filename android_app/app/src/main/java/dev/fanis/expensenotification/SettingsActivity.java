@@ -1,6 +1,7 @@
 package dev.fanis.expensenotification;
 
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -24,7 +25,7 @@ public class SettingsActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        db = new CandidateDb(this);
+        db = CandidateDb.getInstance(this);
         setContentView(buildUi());
     }
 
@@ -88,13 +89,22 @@ public class SettingsActivity extends BaseActivity {
         root.addView(batteryButton);
 
         Button clear = dangerButton("Clear local queue");
-        clear.setOnClickListener(v -> {
-            int deleted = db.deleteAll();
-            Toast.makeText(this, "Deleted " + deleted + " item(s).", Toast.LENGTH_SHORT).show();
-        });
+        clear.setOnClickListener(v -> confirmClearQueue());
         root.addView(clear);
 
         return scroll;
+    }
+
+    private void confirmClearQueue() {
+        new AlertDialog.Builder(this)
+                .setTitle("Clear local queue?")
+                .setMessage("This permanently deletes every captured notification, including ones you have not reviewed yet.")
+                .setPositiveButton("Delete all", (dialog, which) -> {
+                    int deleted = db.deleteAll();
+                    Toast.makeText(this, "Deleted " + deleted + " item(s).", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void scanNow() {
@@ -108,9 +118,14 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void openExpenseManager() {
+        OutputProfile profile = OutputProfile.active(this);
         Intent intent = new Intent();
-        intent.setClassName("com.expensemanager.pro", "com.expensemanager.ExpenseNewTransaction");
-        startActivity(intent);
+        intent.setClassName(profile.packageName, profile.activity);
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Toast.makeText(this, "Could not open " + profile.displayName + ". Is it installed?", Toast.LENGTH_LONG).show();
+        }
     }
 
     private String batteryLabel() {
@@ -176,21 +191,6 @@ public class SettingsActivity extends BaseActivity {
 
     private String notificationSummary() {
         return "Notification access " + enabledWord(isNotificationListenerEnabled());
-    }
-
-    private boolean isNotificationListenerEnabled() {
-        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        String component = getPackageName() + "/" + getPackageName() + ".ExpenseNotificationListener";
-        String shortComponent = getPackageName() + "/.ExpenseNotificationListener";
-        return enabled != null && (enabled.contains(component) || enabled.contains(shortComponent));
-    }
-
-    private boolean isAccessibilityServiceEnabled() {
-        String enabled = Settings.Secure.getString(getContentResolver(), "enabled_accessibility_services");
-        String component = getPackageName() + "/" + getPackageName() + ".ExpenseEntryAccessibilityService";
-        String shortComponent = getPackageName() + "/.ExpenseEntryAccessibilityService";
-        return "1".equals(Settings.Secure.getString(getContentResolver(), "accessibility_enabled")) &&
-                enabled != null && (enabled.contains(component) || enabled.contains(shortComponent));
     }
 
     private static String enabledWord(boolean enabled) {
