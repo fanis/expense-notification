@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.1.0 - 2026-07-03
 - Fix deleting a bundled parser/output config not actually disabling it: the parser kept a hardcoded copy of every bundled config and fell back to it even when the config was hidden. Bundled assets are now the single source of defaults, so Delete/Restore in the config UI really controls what parses.
 - Fix grouped-thousands amounts without decimals: `€1.234` (and `1,234`) now parse as 1234, not 1.23.
 - Fix a crash when tapping Fill or Open Expense Manager with the output app not installed; the candidate is no longer marked processed for a fill that never happened.
