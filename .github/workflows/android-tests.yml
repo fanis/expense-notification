@@ -25,6 +25,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
+          # Optional: persists the Gradle configuration cache across runs when
+          # a GRADLE_ENCRYPTION_KEY secret exists; harmless when unset.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Run unit tests
         working-directory: android_app

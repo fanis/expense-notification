@@ -57,6 +57,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
+          # Optional: lets the Gradle configuration cache persist across runs
+          # (create the secret with e.g. `openssl rand -base64 16`). Without it
+          # the configuration cache is rebuilt each run and its data — which
+          # includes the signing config — is never uploaded to the cache.
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Bump version, fold changelog, tag
         id: bump
@@ -87,13 +92,12 @@ jobs:
           ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
           ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
 
-      - name: Run unit tests
+      # One Gradle invocation for both: a failing test still aborts the release
+      # before anything is pushed, and the build pays the configuration phase
+      # and daemon start only once.
+      - name: Run tests and build signed release APK
         working-directory: android_app
-        run: gradle test
-
-      - name: Build signed release APK
-        working-directory: android_app
-        run: gradle assembleRelease
+        run: gradle test assembleRelease
 
       - name: Name release APK
         id: apk
