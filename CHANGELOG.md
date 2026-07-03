@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Speed up Gradle builds locally and in CI: enable the configuration cache and build cache, and make Cut Release run the tests and the signed build in a single Gradle invocation.
 - Run CI tests only on pull requests: drop the push-to-master trigger, since everything reaching master goes through a tested PR or the Cut Release workflow, which runs the tests itself.
 
 ## v1.1.0 - 2026-07-03

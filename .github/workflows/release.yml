@@ -53,6 +53,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # No cache-encryption-key here on purpose: this job's configuration cache
+      # embeds the signing config, so it must never be persisted to the Actions
+      # cache. It is rebuilt each run (a few seconds); the dependency cache and
+      # the single combined Gradle invocation carry the speedup.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -87,13 +91,12 @@ jobs:
           ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
           ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
 
-      - name: Run unit tests
+      # One Gradle invocation for both: a failing test still aborts the release
+      # before anything is pushed, and the build pays the configuration phase
+      # and daemon start only once.
+      - name: Run tests and build signed release APK
         working-directory: android_app
-        run: gradle test
-
-      - name: Build signed release APK
-        working-directory: android_app
-        run: gradle assembleRelease
+        run: gradle test assembleRelease
 
       - name: Name release APK
         id: apk
