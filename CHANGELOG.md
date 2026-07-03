@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Run CI tests only on pull requests: drop the push-to-master trigger, since everything reaching master goes through a tested PR or the Cut Release workflow, which runs the tests itself.
 
 ## v1.1.0 - 2026-07-03
 - Fix deleting a bundled parser/output config not actually disabling it: the parser kept a hardcoded copy of every bundled config and fell back to it even when the config was hidden. Bundled assets are now the single source of defaults, so Delete/Restore in the config UI really controls what parses.
