@@ -53,15 +53,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # No cache-encryption-key here on purpose: this job's configuration cache
+      # embeds the signing config, so it must never be persisted to the Actions
+      # cache. It is rebuilt each run (a few seconds); the dependency cache and
+      # the single combined Gradle invocation carry the speedup.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
-          # Optional: lets the Gradle configuration cache persist across runs
-          # (create the secret with e.g. `openssl rand -base64 16`). Without it
-          # the configuration cache is rebuilt each run and its data — which
-          # includes the signing config — is never uploaded to the cache.
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Bump version, fold changelog, tag
         id: bump

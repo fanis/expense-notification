@@ -26,7 +26,9 @@ jobs:
         with:
           gradle-version: "9.5.0"
           # Optional: persists the Gradle configuration cache across runs when
-          # a GRADLE_ENCRYPTION_KEY secret exists; harmless when unset.
+          # a GRADLE_ENCRYPTION_KEY secret exists; harmless when unset. Safe
+          # here: test runs have no keystore, so their configuration cache
+          # contains no signing data (unlike Cut Release, which never sets this).
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Run unit tests
