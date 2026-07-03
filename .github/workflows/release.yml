@@ -64,7 +64,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          scripts/release.sh "${{ inputs.bump }}" --skip-build
+          bash scripts/release.sh "${{ inputs.bump }}" --skip-build
           tag="$(git describe --tags --exact-match HEAD)"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           # The commit body carries the changelog bullets release.sh extracted.
