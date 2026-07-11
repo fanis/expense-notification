@@ -15,6 +15,7 @@
     "date": "date"
   },
   "dateFormat": "yyyy-MM-dd",
+  "dateTimeMillisExtra": "dateLong",
   "accessibility": {
     "amountId": "com.example.expenses:id/amount",
     "payeeId": "com.example.expenses:id/payee",

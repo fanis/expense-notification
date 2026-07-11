@@ -26,6 +26,11 @@ final class OutputProfile {
     final Map<String, String> constantExtras;
     final Map<String, String> fieldMap;
     final String dateFormat;
+    // Name of an intent extra that carries the transaction date+time as epoch
+    // milliseconds (a long). Bishinews Expense Manager reads "dateLong" and sets
+    // both the date and the time from it; a plain string date extra is ignored on
+    // its widget-add path. Empty disables it.
+    final String dateTimeMillisExtra;
     final String amountId;
     final String payeeId;
     final String descriptionId;
@@ -33,7 +38,7 @@ final class OutputProfile {
 
     private OutputProfile(String id, String displayName, String packageName, String activity,
                           Map<String, String> constantExtras, Map<String, String> fieldMap,
-                          String dateFormat, String amountId, String payeeId, String descriptionId,
+                          String dateFormat, String dateTimeMillisExtra, String amountId, String payeeId, String descriptionId,
                           ArrayList<String> saveIds) {
         this.id = id;
         this.displayName = displayName;
@@ -42,6 +47,7 @@ final class OutputProfile {
         this.constantExtras = constantExtras;
         this.fieldMap = fieldMap;
         this.dateFormat = dateFormat;
+        this.dateTimeMillisExtra = dateTimeMillisExtra;
         this.amountId = amountId;
         this.payeeId = payeeId;
         this.descriptionId = descriptionId;
@@ -90,6 +96,7 @@ final class OutputProfile {
                 extras,
                 fields,
                 "yyyy-MM-dd",
+                "dateLong",
                 "com.expensemanager.pro:id/expenseAmountInput",
                 "com.expensemanager.pro:id/payee",
                 "com.expensemanager.pro:id/expenseDescriptionInput",
@@ -167,6 +174,7 @@ final class OutputProfile {
                 stringMap(json.optJSONObject("constantExtras")),
                 stringMap(json.optJSONObject("fieldMap")),
                 json.optString("dateFormat", "yyyy-MM-dd"),
+                json.optString("dateTimeMillisExtra", ""),
                 accessibility == null ? "" : accessibility.optString("amountId", ""),
                 accessibility == null ? "" : accessibility.optString("payeeId", ""),
                 accessibility == null ? "" : accessibility.optString("descriptionId", ""),
@@ -242,6 +250,7 @@ final class OutputProfile {
                 + "Category extra: " + categoryExtra() + "\n"
                 + "Description extra: " + descriptionExtra() + "\n"
                 + "Date extra: " + dateExtra() + "\n"
+                + "Date+time millis extra: " + (dateTimeMillisExtra.isEmpty() ? "-" : dateTimeMillisExtra) + "\n"
                 + "Accessibility save ids: " + (saveIds.isEmpty() ? "-" : saveIdsPrefValue());
     }
 

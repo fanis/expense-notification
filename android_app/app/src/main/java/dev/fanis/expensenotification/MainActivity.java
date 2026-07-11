@@ -262,16 +262,17 @@ public class MainActivity extends BaseActivity {
         String category = candidate.isIncome() ? "Income" : "";
         // Date the expense to when the payment happened (the transaction date parsed
         // from the SMS, or the notification post time as a fallback), not now(): a
-        // candidate may sit in the queue for days before the user fills it.
+        // candidate may sit in the queue for days before the user fills it. The exact
+        // millis go in the date+time extra (Expense Manager reads that, not a string
+        // date), with a formatted string date kept as a fallback for other targets.
         String date = expenseDate(candidate.postedAt, profile.dateFormat);
-        if (!fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date)) {
+        if (!fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date, candidate.postedAt)) {
             return;
         }
         db.mark(candidate.id, Candidate.STATUS_PROCESSED);
         refresh();
     }
 
-    // Expense Manager reads the "date" extra as yyyy-MM-dd (on the widgetAdd path).
     private static String expenseDate(long postedAt, String dateFormat) {
         if (postedAt <= 0) {
             return "";
@@ -284,7 +285,7 @@ public class MainActivity extends BaseActivity {
     }
 
     /** Launches the output app's add-transaction form. Returns false when it can't be opened. */
-    private boolean fillExpenseManager(OutputProfile profile, String amount, String merchant, String paymentMethod, String description, String category, String date) {
+    private boolean fillExpenseManager(OutputProfile profile, String amount, String merchant, String paymentMethod, String description, String category, String date, long postedAt) {
         // Prefill the learned payee for this merchant when we have one; otherwise the
         // raw merchant. We keep the raw merchant separately so the accessibility
         // service can learn merchant -> payee from whatever the user finally selects.
@@ -324,6 +325,11 @@ public class MainActivity extends BaseActivity {
         }
         if (date != null && !date.isEmpty()) {
             intent.putExtra(profile.dateExtra(), date);
+        }
+        // The date+time the app actually honors: epoch millis as a long. Expense
+        // Manager derives both the date and the time from this one extra.
+        if (!profile.dateTimeMillisExtra.isEmpty() && postedAt > 0) {
+            intent.putExtra(profile.dateTimeMillisExtra, postedAt);
         }
         try {
             startActivity(intent);
