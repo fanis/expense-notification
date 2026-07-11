@@ -85,9 +85,10 @@ Optional fields:
 - `constantExtras`: extras always sent to the target activity.
 - `fieldMap`: maps canonical fields to target extra names.
 - `dateFormat`: Java date format, default `yyyy-MM-dd`.
+- `timeFormat`: Java time format for the time-of-day extra, default `HH:mm`.
 - `accessibility`: view ids used by the save automation.
 
-Canonical `fieldMap` keys are `amount`, `payee`, `paymentMethod`, `category`, `description`, and `date`.
+Canonical `fieldMap` keys are `amount`, `payee`, `paymentMethod`, `category`, `description`, `date`, and `time`. The `date` and `time` extras are formatted from the captured payment's timestamp (the SMS transaction date, or the notification post time), so filling an expense hours later still carries the original date and time; whether the target app applies the time extra depends on its intent interface.
 
 Accessibility fields:
 

@@ -12,9 +12,11 @@
     "paymentMethod": "paymentMethod",
     "category": "category",
     "description": "description",
-    "date": "date"
+    "date": "date",
+    "time": "time"
   },
   "dateFormat": "yyyy-MM-dd",
+  "timeFormat": "HH:mm",
   "accessibility": {
     "amountId": "com.expensemanager.pro:id/expenseAmountInput",
     "payeeId": "com.expensemanager.pro:id/payee",

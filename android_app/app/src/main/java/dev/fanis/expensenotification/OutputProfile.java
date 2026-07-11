@@ -26,6 +26,7 @@ final class OutputProfile {
     final Map<String, String> constantExtras;
     final Map<String, String> fieldMap;
     final String dateFormat;
+    final String timeFormat;
     final String amountId;
     final String payeeId;
     final String descriptionId;
@@ -33,7 +34,7 @@ final class OutputProfile {
 
     private OutputProfile(String id, String displayName, String packageName, String activity,
                           Map<String, String> constantExtras, Map<String, String> fieldMap,
-                          String dateFormat, String amountId, String payeeId, String descriptionId,
+                          String dateFormat, String timeFormat, String amountId, String payeeId, String descriptionId,
                           ArrayList<String> saveIds) {
         this.id = id;
         this.displayName = displayName;
@@ -42,6 +43,7 @@ final class OutputProfile {
         this.constantExtras = constantExtras;
         this.fieldMap = fieldMap;
         this.dateFormat = dateFormat;
+        this.timeFormat = timeFormat;
         this.amountId = amountId;
         this.payeeId = payeeId;
         this.descriptionId = descriptionId;
@@ -79,6 +81,7 @@ final class OutputProfile {
         fields.put("category", "category");
         fields.put("description", "description");
         fields.put("date", "date");
+        fields.put("time", "time");
         ArrayList<String> saveIds = new ArrayList<>();
         saveIds.add("com.expensemanager.pro:id/expenseSave");
         saveIds.add("com.expensemanager.pro:id/expenseSaveNew");
@@ -90,6 +93,7 @@ final class OutputProfile {
                 extras,
                 fields,
                 "yyyy-MM-dd",
+                "HH:mm",
                 "com.expensemanager.pro:id/expenseAmountInput",
                 "com.expensemanager.pro:id/payee",
                 "com.expensemanager.pro:id/expenseDescriptionInput",
@@ -167,6 +171,7 @@ final class OutputProfile {
                 stringMap(json.optJSONObject("constantExtras")),
                 stringMap(json.optJSONObject("fieldMap")),
                 json.optString("dateFormat", "yyyy-MM-dd"),
+                json.optString("timeFormat", "HH:mm"),
                 accessibility == null ? "" : accessibility.optString("amountId", ""),
                 accessibility == null ? "" : accessibility.optString("payeeId", ""),
                 accessibility == null ? "" : accessibility.optString("descriptionId", ""),
@@ -218,6 +223,10 @@ final class OutputProfile {
         return field("date", "date");
     }
 
+    String timeExtra() {
+        return field("time", "time");
+    }
+
     String saveIdsPrefValue() {
         StringBuilder builder = new StringBuilder();
         for (String saveId : saveIds) {
@@ -242,6 +251,7 @@ final class OutputProfile {
                 + "Category extra: " + categoryExtra() + "\n"
                 + "Description extra: " + descriptionExtra() + "\n"
                 + "Date extra: " + dateExtra() + "\n"
+                + "Time extra: " + timeExtra() + "\n"
                 + "Accessibility save ids: " + (saveIds.isEmpty() ? "-" : saveIdsPrefValue());
     }
 
