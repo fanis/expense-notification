@@ -85,10 +85,10 @@ Optional fields:
 - `constantExtras`: extras always sent to the target activity.
 - `fieldMap`: maps canonical fields to target extra names.
 - `dateFormat`: Java date format, default `yyyy-MM-dd`.
-- `timeFormat`: Java time format for the time-of-day extra, default `HH:mm`.
+- `dateTimeMillisExtra`: name of an intent extra that receives the transaction date+time as epoch milliseconds (a long). Bishinews Expense Manager reads `dateLong` and sets both the date and the time from it; a string `date` extra is ignored on its widget-add path. Empty (default) sends no such extra.
 - `accessibility`: view ids used by the save automation.
 
-Canonical `fieldMap` keys are `amount`, `payee`, `paymentMethod`, `category`, `description`, `date`, and `time`. The `date` and `time` extras are formatted from the captured payment's timestamp (the SMS transaction date, or the notification post time), so filling an expense hours later still carries the original date and time; whether the target app applies the time extra depends on its intent interface.
+Canonical `fieldMap` keys are `amount`, `payee`, `paymentMethod`, `category`, `description`, and `date`. The `date` string extra and the `dateTimeMillisExtra` long extra are both derived from the captured payment's timestamp (the SMS transaction date, or the notification post time), so filling an expense hours later still carries the original date and time. Expense Manager honors the `dateLong` millis extra, not the string date.
 
 Accessibility fields:
 

@@ -7,30 +7,29 @@ import org.junit.Test;
 public class OutputProfileTest {
 
     @Test
-    public void defaultsCarryDateAndTimeExtras() {
+    public void defaultsCarryDateAndDateTimeMillisExtras() {
         OutputProfile profile = OutputProfile.defaults();
         assertEquals("date", profile.dateExtra());
-        assertEquals("time", profile.timeExtra());
         assertEquals("yyyy-MM-dd", profile.dateFormat);
-        assertEquals("HH:mm", profile.timeFormat);
+        // Expense Manager reads a long epoch-millis "dateLong" extra for date+time.
+        assertEquals("dateLong", profile.dateTimeMillisExtra);
     }
 
     @Test
-    public void configCanRemapTimeExtraAndFormat() throws Exception {
+    public void configCanSetDateTimeMillisExtraName() throws Exception {
         OutputProfile profile = OutputProfile.fromConfigJson("{"
                 + "\"id\":\"custom\",\"package\":\"dev.x\",\"activity\":\"dev.x.Add\","
-                + "\"fieldMap\":{\"time\":\"tx_time\"},"
-                + "\"timeFormat\":\"HH:mm:ss\""
+                + "\"dateTimeMillisExtra\":\"txMillis\""
                 + "}");
-        assertEquals("tx_time", profile.timeExtra());
-        assertEquals("HH:mm:ss", profile.timeFormat);
+        assertEquals("txMillis", profile.dateTimeMillisExtra);
     }
 
     @Test
-    public void missingTimeConfigFallsBackToDefaults() throws Exception {
+    public void dateTimeMillisExtraDefaultsEmptyForGenericConfigs() throws Exception {
+        // A config that does not opt in gets no long extra, so unknown apps are not
+        // sent a "dateLong" they never asked for.
         OutputProfile profile = OutputProfile.fromConfigJson(
                 "{\"id\":\"custom\",\"package\":\"dev.x\",\"activity\":\"dev.x.Add\"}");
-        assertEquals("time", profile.timeExtra());
-        assertEquals("HH:mm", profile.timeFormat);
+        assertEquals("", profile.dateTimeMillisExtra);
     }
 }

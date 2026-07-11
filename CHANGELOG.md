@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Send the captured payment's time of day alongside its date when filling an expense: the prefill intent now carries a `time` extra (formatted with the output profile's `timeFormat`, default `HH:mm`) from the SMS transaction time or the notification post time, so filling hours later can keep the original time in output apps that accept one.
+- Fill the expense with the captured payment's original date **and time**, even when filling hours later: the prefill intent now carries the timestamp as an epoch-millis long extra (`dateLong`, configurable via the output profile's `dateTimeMillisExtra`), which Expense Manager reads to set both the date and the time. The previously sent string `date` extra was silently ignored on its widget-add path.
 - Speed up Gradle builds locally and in CI: enable the configuration cache and build cache, and make Cut Release run the tests and the signed build in a single Gradle invocation.
 - Run CI tests only on pull requests: drop the push-to-master trigger, since everything reaching master goes through a tested PR or the Cut Release workflow, which runs the tests itself.
 

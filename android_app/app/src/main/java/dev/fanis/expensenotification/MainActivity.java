@@ -262,39 +262,30 @@ public class MainActivity extends BaseActivity {
         String category = candidate.isIncome() ? "Income" : "";
         // Date the expense to when the payment happened (the transaction date parsed
         // from the SMS, or the notification post time as a fallback), not now(): a
-        // candidate may sit in the queue for days before the user fills it. The time
-        // of day rides along in a separate extra for output apps that accept one.
+        // candidate may sit in the queue for days before the user fills it. The exact
+        // millis go in the date+time extra (Expense Manager reads that, not a string
+        // date), with a formatted string date kept as a fallback for other targets.
         String date = expenseDate(candidate.postedAt, profile.dateFormat);
-        String time = expenseTime(candidate.postedAt, profile.timeFormat);
-        if (!fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date, time)) {
+        if (!fillExpenseManager(profile, amount, candidate.merchant, candidate.suggestedPaymentMethod, description, category, date, candidate.postedAt)) {
             return;
         }
         db.mark(candidate.id, Candidate.STATUS_PROCESSED);
         refresh();
     }
 
-    // Expense Manager reads the "date" extra as yyyy-MM-dd (on the widgetAdd path).
     private static String expenseDate(long postedAt, String dateFormat) {
-        return formatPostedAt(postedAt, dateFormat, "yyyy-MM-dd");
-    }
-
-    private static String expenseTime(long postedAt, String timeFormat) {
-        return formatPostedAt(postedAt, timeFormat, "HH:mm");
-    }
-
-    private static String formatPostedAt(long postedAt, String format, String fallbackFormat) {
         if (postedAt <= 0) {
             return "";
         }
         try {
-            return new SimpleDateFormat(format == null || format.isEmpty() ? fallbackFormat : format, Locale.US).format(new Date(postedAt));
+            return new SimpleDateFormat(dateFormat == null || dateFormat.isEmpty() ? "yyyy-MM-dd" : dateFormat, Locale.US).format(new Date(postedAt));
         } catch (IllegalArgumentException ignored) {
-            return new SimpleDateFormat(fallbackFormat, Locale.US).format(new Date(postedAt));
+            return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date(postedAt));
         }
     }
 
     /** Launches the output app's add-transaction form. Returns false when it can't be opened. */
-    private boolean fillExpenseManager(OutputProfile profile, String amount, String merchant, String paymentMethod, String description, String category, String date, String time) {
+    private boolean fillExpenseManager(OutputProfile profile, String amount, String merchant, String paymentMethod, String description, String category, String date, long postedAt) {
         // Prefill the learned payee for this merchant when we have one; otherwise the
         // raw merchant. We keep the raw merchant separately so the accessibility
         // service can learn merchant -> payee from whatever the user finally selects.
@@ -335,8 +326,10 @@ public class MainActivity extends BaseActivity {
         if (date != null && !date.isEmpty()) {
             intent.putExtra(profile.dateExtra(), date);
         }
-        if (time != null && !time.isEmpty()) {
-            intent.putExtra(profile.timeExtra(), time);
+        // The date+time the app actually honors: epoch millis as a long. Expense
+        // Manager derives both the date and the time from this one extra.
+        if (!profile.dateTimeMillisExtra.isEmpty() && postedAt > 0) {
+            intent.putExtra(profile.dateTimeMillisExtra, postedAt);
         }
         try {
             startActivity(intent);

@@ -12,11 +12,10 @@
     "paymentMethod": "payment_method",
     "category": "category",
     "description": "description",
-    "date": "date",
-    "time": "time"
+    "date": "date"
   },
   "dateFormat": "yyyy-MM-dd",
-  "timeFormat": "HH:mm",
+  "dateTimeMillisExtra": "dateLong",
   "accessibility": {
     "amountId": "com.example.expenses:id/amount",
     "payeeId": "com.example.expenses:id/payee",
