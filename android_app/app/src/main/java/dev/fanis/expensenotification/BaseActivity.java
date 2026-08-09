@@ -2,8 +2,10 @@ package dev.fanis.expensenotification;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Typeface;
@@ -26,20 +28,69 @@ import android.widget.TextView;
 
 /** Shared UI scaffolding and battery-optimization helpers for the app's screens. */
 abstract class BaseActivity extends Activity {
-    protected static final int COLOR_TEAL = 0xff13696a;
-    protected static final int COLOR_BG = 0xfff6f8f9;
-    protected static final int COLOR_CARD = 0xffffffff;
-    protected static final int COLOR_BORDER = 0xffd6dde2;
-    protected static final int COLOR_TEXT = 0xff0d1924;
-    protected static final int COLOR_MUTED = 0xff485460;
-    protected static final int COLOR_DANGER = 0xff9f2f44;
+    // Palette fields keep their constant-era names; they are resolved per activity
+    // in attachBaseContext once the effective light/dark mode is known.
+    protected int COLOR_TEAL = 0xff13696a;
+    protected int COLOR_TEAL_TEXT = 0xff13696a;
+    protected int COLOR_BG = 0xfff6f8f9;
+    protected int COLOR_CARD = 0xffffffff;
+    protected int COLOR_BORDER = 0xffd6dde2;
+    protected int COLOR_TEXT = 0xff0d1924;
+    protected int COLOR_MUTED = 0xff485460;
+    protected int COLOR_HINT = 0xff788692;
+    protected int COLOR_DANGER = 0xff9f2f44;
+
+    private String appliedThemeMode;
+    private boolean darkMode;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(newBase);
+        appliedThemeMode = ThemePreferences.mode(newBase);
+        int forcedNight = ThemePreferences.forcedNightBits(appliedThemeMode);
+        if (forcedNight != 0) {
+            // Overriding uiMode makes this activity's resources (values-night theme,
+            // dialogs) and the isDarkMode() check below follow the forced choice.
+            Configuration override = new Configuration();
+            int baseUiMode = newBase.getResources().getConfiguration().uiMode;
+            override.uiMode = forcedNight | (baseUiMode & ~Configuration.UI_MODE_NIGHT_MASK);
+            applyOverrideConfiguration(override);
+        }
+        darkMode = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+        if (darkMode) {
+            COLOR_TEAL_TEXT = 0xff7ecfd0;
+            COLOR_BG = 0xff10171c;
+            COLOR_CARD = 0xff1a232a;
+            COLOR_BORDER = 0xff32404a;
+            COLOR_TEXT = 0xffe8edf1;
+            COLOR_MUTED = 0xffa4b2bc;
+            COLOR_HINT = 0xff6f7f8b;
+            COLOR_DANGER = 0xffb43a52;
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // A stacked activity resumes with a stale palette after the theme changed
+        // in Settings; rebuild it with the new choice applied.
+        if (appliedThemeMode != null && !appliedThemeMode.equals(ThemePreferences.mode(this))) {
+            recreate();
+        }
+    }
+
+    protected boolean isDarkMode() {
+        return darkMode;
+    }
 
     /** Wraps a vertical content column in a scroller with status/navigation-bar insets applied. */
     protected ScrollView scrollRoot(LinearLayout root) {
         Window window = getWindow();
         window.setStatusBarColor(COLOR_TEAL);
-        window.setNavigationBarColor(Color.WHITE);
-        window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        window.setNavigationBarColor(darkMode ? COLOR_BG : Color.WHITE);
+        window.getDecorView().setSystemUiVisibility(
+                darkMode ? 0 : View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(COLOR_BG);
@@ -198,7 +249,7 @@ abstract class BaseActivity extends Activity {
 
     protected Button secondaryButton(String label) {
         Button button = button(label);
-        button.setTextColor(COLOR_TEAL);
+        button.setTextColor(COLOR_TEAL_TEXT);
         button.setBackground(rounded(COLOR_CARD, COLOR_BORDER, 5));
         return button;
     }
@@ -252,7 +303,7 @@ abstract class BaseActivity extends Activity {
 
     protected void styleInput(EditText input) {
         input.setTextColor(COLOR_TEXT);
-        input.setHintTextColor(0xff788692);
+        input.setHintTextColor(COLOR_HINT);
         input.setTextSize(15);
         input.setBackgroundTintList(ColorStateList.valueOf(COLOR_BORDER));
     }

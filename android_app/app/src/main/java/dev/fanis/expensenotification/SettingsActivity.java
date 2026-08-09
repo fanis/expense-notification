@@ -19,6 +19,7 @@ public class SettingsActivity extends BaseActivity {
 
     private CandidateDb db;
     private Button currencyButton;
+    private Button themeButton;
     private Button payeeAliasesButton;
     private Button batteryButton;
 
@@ -71,6 +72,10 @@ public class SettingsActivity extends BaseActivity {
         currencyButton = button(currencyLabel());
         currencyButton.setOnClickListener(v -> showCurrencyDialog());
         root.addView(currencyButton);
+
+        themeButton = button(themeLabel());
+        themeButton.setOnClickListener(v -> showThemeDialog());
+        root.addView(themeButton);
 
         payeeAliasesButton = button(payeeAliasesLabel());
         payeeAliasesButton.setOnClickListener(v -> startActivity(new Intent(this, PayeeAliasesActivity.class)));
@@ -161,6 +166,44 @@ public class SettingsActivity extends BaseActivity {
                         currencyButton.setText(currencyLabel());
                     }
                     dialog.dismiss();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private String themeLabel() {
+        return "Theme: " + ThemePreferences.label(ThemePreferences.mode(this));
+    }
+
+    private void showThemeDialog() {
+        String[] modes = new String[]{
+                ThemePreferences.MODE_AUTO,
+                ThemePreferences.MODE_LIGHT,
+                ThemePreferences.MODE_DARK,
+        };
+        CharSequence[] labels = new CharSequence[modes.length];
+        int currentIndex = 0;
+        String current = ThemePreferences.mode(this);
+        for (int i = 0; i < modes.length; i++) {
+            labels[i] = ThemePreferences.label(modes[i]);
+            if (modes[i].equals(current)) {
+                currentIndex = i;
+            }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Theme")
+                .setSingleChoiceItems(labels, currentIndex, (dialog, which) -> {
+                    boolean changed = !modes[which].equals(current);
+                    ThemePreferences.setMode(this, modes[which]);
+                    if (themeButton != null) {
+                        themeButton.setText(themeLabel());
+                    }
+                    dialog.dismiss();
+                    if (changed) {
+                        // Rebuild this screen with the new palette; stacked
+                        // activities catch up in BaseActivity.onResume.
+                        recreate();
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
