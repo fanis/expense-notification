@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.3.0 - 2026-08-09
 - Add a **Theme** setting with Auto (follow system), Light, and Dark modes. Every screen, dialog, and the system bars switch palettes with the choice; Auto tracks the device's dark-mode setting live.
 
 ## v1.2.0 - 2026-07-11
