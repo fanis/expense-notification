@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add a **Theme** setting with Auto (follow system), Light, and Dark modes. Every screen, dialog, and the system bars switch palettes with the choice; Auto tracks the device's dark-mode setting live.
 
 ## v1.2.0 - 2026-07-11
 - Fill the expense with the captured payment's original date **and time**, even when filling hours later: the prefill intent now carries the timestamp as an epoch-millis long extra (`dateLong`, configurable via the output profile's `dateTimeMillisExtra`), which Expense Manager reads to set both the date and the time. The previously sent string `date` extra was silently ignored on its widget-add path.
