@@ -29,6 +29,7 @@ It is designed to keep your expense app as the system of record while removing m
 - Ships default input configs for Revolut, Google Wallet, PayPal receipt emails (via notifications from Gmail, Outlook, Samsung Email, and other well-known email apps), Alpha Bank, Bank of Cyprus, and Eurobank Cyprus.
 - Parses likely expense candidates: amount, currency, merchant/payee, source app, payment method, timestamp.
 - Defaults card payments to the **Credit Card** payment method, but keeps a friendly Google Wallet card nickname from notifications like `€40.00 with Travel Card` when one is present.
+- Reads the expanded lines of stacked summary notifications too (email digests, SMS conversation history), so a payment whose sender only appears inside a summary line is still captured, and bank SMS missed while notification access was down are recovered from the conversation summary. Recovered lines are deduplicated so a payment seen both as its own notification and as a summary line is queued once.
 - Stores candidates locally on the phone.
 - Shows a review queue.
 - Optionally flags foreign-currency captures: set a **Home currency** in Settings and any capture in a different currency gets a warning badge in the review queue, since the amount is filled into the output app as a bare number.
