@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add a **Show: all / unprocessed only** filter to the review queue that hides processed and skipped candidates. The choice persists across launches, the status line shows how many of the captured notifications are unprocessed, and duplicate hints still compare against everything captured, including items the filter is hiding.
 
 ## v1.4.0 - 2026-08-16
 - Parse the expanded entries of stacked summary notifications, both InboxStyle lines (email digests, older SMS apps) and MessagingStyle conversation history (modern SMS apps). A payment whose sender only appears inside a summary entry — e.g. a PayPal receipt inside a "2 new messages" email digest, where the line reads "Sender Subject..." — is now captured, and bank SMS missed while notification access was down are recovered from the conversation history, dated to when the message actually arrived when the summary carries per-message timestamps. Each entry is deduplicated by its own content, and an equivalence check (same app, amount, currency, and merchant within 72 hours) keeps a payment seen both as its own notification and as a summary entry from being queued twice.

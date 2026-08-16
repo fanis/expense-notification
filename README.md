@@ -32,7 +32,7 @@ It is designed to keep your expense app as the system of record while removing m
 - Reads the expanded entries of stacked summary notifications too (InboxStyle email digests, MessagingStyle SMS conversation history), so a payment whose sender only appears inside a summary entry is still captured, and bank SMS missed while notification access was down are recovered from the conversation history. Recovered entries are deduplicated so a payment seen both as its own notification and as a summary entry is queued once.
 - Hints at cross-source duplicates in the review queue: when another app captured the same amount and currency within 24 hours (e.g. a PayPal receipt email next to the card charge that funded it), the card shows a "Possible duplicate" note. Nothing is dropped automatically; Skip stays your call.
 - Stores candidates locally on the phone.
-- Shows a review queue.
+- Shows a review queue, with a persistent **Show: all / unprocessed only** filter for hiding processed and skipped items.
 - Optionally flags foreign-currency captures: set a **Home currency** in Settings and any capture in a different currency gets a warning badge in the review queue, since the amount is filled into the output app as a bare number.
 - Opens the configured output app. The bundled output target is Bishinews Expense Manager, and additional expense apps can be added with output JSON profiles.
 - Uses intent extras and optional Accessibility field ids from the active output profile to fill amount, payee/merchant, description, payment method, category, and date when the target app supports those fields.
