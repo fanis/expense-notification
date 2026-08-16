@@ -20,7 +20,7 @@ Required fields:
 - `displayName`: shown in diagnostics.
 - `enabled`: boolean.
 - `priority`: lower numbers run first.
-- `match`: `packages` for app notifications, `senders` for SMS sender names.
+- `match`: `packages` for app notifications, `senders` for SMS sender names. When both are set, a notification must come from one of the packages **and** have a title equal to one of the senders — used to scope an email app's notifications to a single sender, e.g. PayPal receipt emails in Gmail.
 - `rules`: ordered parser rules.
 
 Optional fields:

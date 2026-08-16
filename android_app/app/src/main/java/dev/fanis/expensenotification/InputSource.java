@@ -56,13 +56,21 @@ final class InputSource {
     boolean matches(String packageName, String title, Set<String> smsPackages) {
         String safePackage = packageName == null ? "" : packageName;
         if (packages.contains(safePackage)) {
-            return true;
+            // A source that names both packages and senders (e.g. PayPal receipts
+            // arriving through the Gmail package) only claims notifications whose
+            // title is one of those senders, so the rest of the email app's
+            // notifications stay unwatched.
+            return senders.isEmpty() || senderMatches(title);
         }
         if (!senders.isEmpty() && smsPackages.contains(safePackage)) {
-            String lowerTitle = (title == null ? "" : title).trim().toLowerCase(Locale.ROOT);
-            return senders.contains(lowerTitle);
+            return senderMatches(title);
         }
         return packages.isEmpty() && senders.isEmpty();
+    }
+
+    private boolean senderMatches(String title) {
+        String lowerTitle = (title == null ? "" : title).trim().toLowerCase(Locale.ROOT);
+        return senders.contains(lowerTitle);
     }
 
     private static String stripJson(String fileName) {

@@ -26,7 +26,7 @@ It is designed to keep your expense app as the system of record while removing m
 
 - Reads active payment notifications through Android notification access.
 - Watches configured notification packages and SMS senders from editable JSON input-source files.
-- Ships default input configs for Revolut, Google Wallet, Alpha Bank, Bank of Cyprus, and Eurobank Cyprus.
+- Ships default input configs for Revolut, Google Wallet, PayPal receipt emails (via Gmail notifications), Alpha Bank, Bank of Cyprus, and Eurobank Cyprus.
 - Parses likely expense candidates: amount, currency, merchant/payee, source app, payment method, timestamp.
 - Defaults card payments to the **Credit Card** payment method, but keeps a friendly Google Wallet card nickname from notifications like `€40.00 with Travel Card` when one is present.
 - Stores candidates locally on the phone.
