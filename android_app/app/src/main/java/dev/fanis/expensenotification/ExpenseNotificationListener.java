@@ -109,7 +109,10 @@ public class ExpenseNotificationListener extends NotificationListenerService {
 
         Bundle extras = notification.extras;
         String title = text(extras, Notification.EXTRA_TITLE);
-        if (!isWatched(sbn.getPackageName(), title)) {
+        CharSequence[] lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+        // A stacked summary (e.g. an email digest titled "2 new messages") carries the
+        // watched sender inside its lines rather than in the title.
+        if (!isWatched(sbn.getPackageName(), title) && !anyStackedLineWatched(context, sbn.getPackageName(), lines)) {
             return false;
         }
         String text = text(extras, Notification.EXTRA_TEXT);
@@ -125,22 +128,71 @@ public class ExpenseNotificationListener extends NotificationListenerService {
                 .putString("last_watched_title", title)
                 .putString("last_watched_body", body);
 
+        int saved = capture(context, sbn.getPackageName(), appName(context, sbn.getPackageName()), sbn.getKey(),
+                sbn.getPostTime(), title.isEmpty() ? firstNonEmpty(ticker, tag) : title, body, lines);
+        diagnostics.putString("last_result", saved > 0
+                ? "Saved " + saved + " candidate(s)"
+                : "No new candidate (parser rejected, or duplicate)").apply();
+        return saved > 0;
+    }
+
+    /**
+     * Parses the notification body plus, for stacked summaries, each expanded line,
+     * and stores whatever is new. Every stacked line is keyed by its own content, so
+     * messages that were missed while the listener was down are recovered from the
+     * summary's history without duplicating the ones already captured; the newest
+     * line is normally also the notification body and is skipped in the loop because
+     * the body parse above already covers it.
+     */
+    static int capture(Context context, String packageName, String appName, String sbnKey, long postedAt,
+                       String title, String body, CharSequence[] lines) {
+        CandidateDb db = CandidateDb.getInstance(context);
+        int saved = 0;
         Candidate candidate = ExpenseParser.parse(
-                context,
-                sbn.getPackageName(),
-                appName(context, sbn.getPackageName()),
-                dedupeKey(sbn.getKey(), body),
-                sbn.getPostTime(),
-                title.isEmpty() ? firstNonEmpty(ticker, tag) : title,
-                body);
-        if (candidate == null) {
-            diagnostics.putString("last_result", "Parser rejected watched notification").apply();
+                context, packageName, appName, dedupeKey(sbnKey, body), postedAt, title, body);
+        if (candidate != null && db.insertIfNew(candidate) != -1) {
+            saved++;
+        }
+        if (lines == null) {
+            return saved;
+        }
+        String safeBody = body == null ? "" : body;
+        for (CharSequence rawLine : lines) {
+            String line = rawLine == null ? "" : rawLine.toString().trim();
+            if (line.isEmpty() || safeBody.contains(line)) {
+                continue;
+            }
+            String lineKey = dedupeKey(sbnKey, line);
+            Candidate fromLine = ExpenseParser.parse(context, packageName, appName, lineKey, postedAt, title, line);
+            if (fromLine == null) {
+                // Email digests put the sender inside the line ("Sender Subject...");
+                // retry with the line's own sender as the title.
+                String[] split = NotificationText.splitStackedLine(line);
+                if (split != null) {
+                    fromLine = ExpenseParser.parse(context, packageName, appName, lineKey, postedAt, split[0], split[1]);
+                }
+            }
+            // The same payment can already be in the queue through its own notification,
+            // whose body text (and so its dedupe key) differs from the summary line;
+            // recovery from lines is best-effort and must never double-capture.
+            if (fromLine != null && !db.hasEquivalent(fromLine) && db.insertIfNew(fromLine) != -1) {
+                saved++;
+            }
+        }
+        return saved;
+    }
+
+    private static boolean anyStackedLineWatched(Context context, String packageName, CharSequence[] lines) {
+        if (lines == null) {
             return false;
         }
-
-        long inserted = CandidateDb.getInstance(context).insertIfNew(candidate);
-        diagnostics.putString("last_result", inserted == -1 ? "Duplicate candidate ignored" : "Candidate saved").apply();
-        return inserted != -1;
+        for (CharSequence rawLine : lines) {
+            String[] split = NotificationText.splitStackedLine(rawLine == null ? "" : rawLine.toString().trim());
+            if (split != null && ExpenseParser.isWatched(context, packageName, split[0])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Identity used to dedupe captures (stored in the candidates table's UNIQUE
