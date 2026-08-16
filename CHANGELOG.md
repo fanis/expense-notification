@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.4.0 - 2026-08-16
 - Parse the expanded entries of stacked summary notifications, both InboxStyle lines (email digests, older SMS apps) and MessagingStyle conversation history (modern SMS apps). A payment whose sender only appears inside a summary entry — e.g. a PayPal receipt inside a "2 new messages" email digest, where the line reads "Sender Subject..." — is now captured, and bank SMS missed while notification access was down are recovered from the conversation history, dated to when the message actually arrived when the summary carries per-message timestamps. Each entry is deduplicated by its own content, and an equivalence check (same app, amount, currency, and merchant within 72 hours) keeps a payment seen both as its own notification and as a summary entry from being queued twice.
 - PayPal: capture refunds ("You received a refund of ... from ...", "... refunded you ...") and received money ("... sent you ...") as income candidates, and fall back to the "Receipt for Your Payment to ..." subject line when the notification preview cuts off the payment sentence. Money requests are not captured.
 - Mark likely cross-source duplicates in the review queue: when another app captured the same amount and currency within 24 hours (e.g. a PayPal receipt email next to the card charge that funded it), the card shows a muted "Possible duplicate — also captured from ..." hint. Nothing is suppressed automatically — two genuinely distinct charges can share an amount and a day — so Skip stays the reviewer's call.
