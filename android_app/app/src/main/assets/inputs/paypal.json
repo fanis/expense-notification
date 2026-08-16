@@ -72,9 +72,9 @@
       "package": "com.google.android.gm",
       "app": "Gmail",
       "title": "PayPal",
-      "body": "Receipt for Your Payment to SAMPLE MERCHANT INC\nSAMPLE NAME, you successfully sent a payment.\nHello, SAMPLE NAME\nYou paid $17,67 USD to SAMPLE MERCHANT INC\nView or Manage Payment",
+      "body": "Receipt for Your Payment to SAMPLE MERCHANT INC\nSAMPLE NAME, you successfully sent a payment.\nHello, SAMPLE NAME\nYou paid $12,34 USD to SAMPLE MERCHANT INC\nView or Manage Payment",
       "expect": {
-        "amount": "17.67",
+        "amount": "12.34",
         "currency": "USD",
         "merchant": "SAMPLE MERCHANT INC",
         "paymentMethod": "PayPal"
@@ -147,7 +147,7 @@
       "package": "com.google.android.gm",
       "app": "Gmail",
       "title": "SAMPLE SENDER",
-      "body": "You paid $17,67 USD to SAMPLE MERCHANT INC",
+      "body": "You paid $12,34 USD to SAMPLE MERCHANT INC",
       "expect": {
         "matched": false
       }

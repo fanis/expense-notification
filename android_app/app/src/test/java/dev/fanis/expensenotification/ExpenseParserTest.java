@@ -188,18 +188,18 @@ public class ExpenseParserTest {
     public void parsesPayPalReceiptEmailFromGmail() {
         // Real Gmail notification for a PayPal payment receipt: title is the email
         // sender ("PayPal"), body is the subject plus snippet. The amount uses a
-        // locale decimal comma ($17,67 USD).
+        // locale decimal comma ($12,34 USD).
         Candidate c = parseAssets(
                 "com.google.android.gm", "Gmail", 0L,
                 "PayPal",
                 "Receipt for Your Payment to SAMPLE MERCHANT INC\n"
                         + "SAMPLE NAME, you successfully sent a payment.\n"
                         + "Hello, SAMPLE NAME\n"
-                        + "You paid $17,67 USD to SAMPLE MERCHANT INC\n"
+                        + "You paid $12,34 USD to SAMPLE MERCHANT INC\n"
                         + "View or Manage Payment");
         assertNotNull(c);
         assertEquals("USD", c.currency);
-        assertEquals("17.67", c.amount);
+        assertEquals("12.34", c.amount);
         assertEquals("SAMPLE MERCHANT INC", c.merchant);
         assertEquals("PayPal", c.suggestedPaymentMethod);
     }
@@ -251,7 +251,7 @@ public class ExpenseParserTest {
         Candidate c = parseAssets(
                 "com.google.android.gm", "Gmail", 0L,
                 "SAMPLE SENDER",
-                "You paid $17,67 USD to SAMPLE MERCHANT INC");
+                "You paid $12,34 USD to SAMPLE MERCHANT INC");
         assertNull(c);
     }
 
