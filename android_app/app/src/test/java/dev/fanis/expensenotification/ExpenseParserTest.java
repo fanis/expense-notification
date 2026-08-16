@@ -230,6 +230,21 @@ public class ExpenseParserTest {
     }
 
     @Test
+    public void parsesPayPalYenReceiptWithNonLatinSymbol() {
+        // Any Unicode currency symbol may precede the amount, and any ISO code may
+        // follow it; grouped thousands without decimals must parse as whole yen.
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "Receipt for Your Payment to SAMPLE MERCHANT\nYou paid ¥1,500 JPY to SAMPLE MERCHANT");
+        assertNotNull(c);
+        assertEquals("JPY", c.currency);
+        assertEquals("1500", c.amount);
+        assertEquals("SAMPLE MERCHANT", c.merchant);
+        assertEquals("PayPal", c.suggestedPaymentMethod);
+    }
+
+    @Test
     public void gmailNotificationFromOtherSenderIsNotCaptured() {
         // The PayPal source names both the Gmail package and the "PayPal" sender, so
         // a payment-shaped email from anyone else must not be claimed.

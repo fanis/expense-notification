@@ -31,6 +31,7 @@ It is designed to keep your expense app as the system of record while removing m
 - Defaults card payments to the **Credit Card** payment method, but keeps a friendly Google Wallet card nickname from notifications like `€40.00 with Travel Card` when one is present.
 - Stores candidates locally on the phone.
 - Shows a review queue.
+- Optionally flags foreign-currency captures: set a **Home currency** in Settings and any capture in a different currency gets a warning badge in the review queue, since the amount is filled into the output app as a bare number.
 - Opens the configured output app. The bundled output target is Bishinews Expense Manager, and additional expense apps can be added with output JSON profiles.
 - Uses intent extras and optional Accessibility field ids from the active output profile to fill amount, payee/merchant, description, payment method, category, and date when the target app supports those fields.
 - Pre-types the merchant into the target app's payee autocomplete so you can pick your saved payee from the dropdown, then learns that merchant -> payee choice and prefills it next time. Manage learned mappings from the **Payee aliases** screen, which also has a **Blocked merchants** list for platforms like Wolt or Bolt where the real payee changes every time and should never be auto-mapped.

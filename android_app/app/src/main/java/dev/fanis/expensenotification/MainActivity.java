@@ -169,6 +169,20 @@ public class MainActivity extends BaseActivity {
         heading.setTextSize(16);
         card.addView(heading);
 
+        String fillCurrency = fillCurrency(candidate);
+        if (CurrencyPreferences.isForeign(this, fillCurrency)) {
+            // The output app has no currency field: Fill sends the bare number, so a
+            // foreign-currency amount would silently land on the home-currency book.
+            TextView badge = new TextView(this);
+            badge.setText("⚠ " + fillCurrency.trim() + " amount — home currency is "
+                    + CurrencyPreferences.homeCurrency(this));
+            badge.setTextColor(COLOR_DANGER);
+            badge.setTypeface(Typeface.DEFAULT_BOLD);
+            badge.setTextSize(13);
+            badge.setPadding(0, dp(2), 0, dp(2));
+            card.addView(badge);
+        }
+
         card.addView(bodyText(
                 emptyDash(candidate.suggestedPaymentMethod) +
                         " - " + emptyDash(candidate.suggestedCategory)));
@@ -224,6 +238,15 @@ public class MainActivity extends BaseActivity {
                 1f);
         params.setMargins(0, dp(8), dp(8), 0);
         actions.addView(button, params);
+    }
+
+    /** The currency of the amount that Fill would send, following the currency mode. */
+    private String fillCurrency(Candidate candidate) {
+        if (candidate.hasMultipleCurrencies()
+                && CurrencyPreferences.MODE_ORIGINAL.equals(CurrencyPreferences.mode(this))) {
+            return candidate.originalCurrency;
+        }
+        return candidate.currency;
     }
 
     private void fillExpenseManager(Candidate candidate) {

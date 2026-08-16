@@ -7,8 +7,11 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -19,6 +22,7 @@ public class SettingsActivity extends BaseActivity {
 
     private CandidateDb db;
     private Button currencyButton;
+    private Button homeCurrencyButton;
     private Button themeButton;
     private Button payeeAliasesButton;
     private Button batteryButton;
@@ -72,6 +76,10 @@ public class SettingsActivity extends BaseActivity {
         currencyButton = button(currencyLabel());
         currencyButton.setOnClickListener(v -> showCurrencyDialog());
         root.addView(currencyButton);
+
+        homeCurrencyButton = button(homeCurrencyLabel());
+        homeCurrencyButton.setOnClickListener(v -> showHomeCurrencyDialog());
+        root.addView(homeCurrencyButton);
 
         themeButton = button(themeLabel());
         themeButton.setOnClickListener(v -> showThemeDialog());
@@ -166,6 +174,41 @@ public class SettingsActivity extends BaseActivity {
                         currencyButton.setText(currencyLabel());
                     }
                     dialog.dismiss();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private String homeCurrencyLabel() {
+        String home = CurrencyPreferences.homeCurrency(this);
+        return "Home currency: " + (home.isEmpty() ? "not set" : home);
+    }
+
+    private void showHomeCurrencyDialog() {
+        EditText input = new EditText(this);
+        styleInput(input);
+        input.setHint("3-letter code, e.g. EUR");
+        input.setText(CurrencyPreferences.homeCurrency(this));
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        FrameLayout container = new FrameLayout(this);
+        container.setPadding(dp(20), dp(8), dp(20), 0);
+        container.addView(input);
+        new AlertDialog.Builder(this)
+                .setTitle("Home currency")
+                .setMessage("Captured payments in a different currency get a warning badge in the review queue, "
+                        + "since the amount is filled as a bare number. Leave empty to disable.")
+                .setView(container)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String typed = input.getText().toString().trim();
+                    String cleaned = CurrencyPreferences.normalizeHomeCurrency(typed);
+                    if (!typed.isEmpty() && cleaned.isEmpty()) {
+                        Toast.makeText(this, "Not a 3-letter currency code; home currency unchanged.", Toast.LENGTH_LONG).show();
+                    } else {
+                        CurrencyPreferences.setHomeCurrency(this, cleaned);
+                    }
+                    if (homeCurrencyButton != null) {
+                        homeCurrencyButton.setText(homeCurrencyLabel());
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
