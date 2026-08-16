@@ -205,6 +205,31 @@ public class ExpenseParserTest {
     }
 
     @Test
+    public void parsesPayPalReceiptEmailFromOtherEmailClients() {
+        // The PayPal source watches the well-known Android email clients, not just
+        // Gmail; each shows the sender ("PayPal") as the notification title.
+        String[] clients = {
+                "com.microsoft.office.outlook",
+                "com.samsung.android.email.provider",
+                "com.yahoo.mobile.client.android.mail",
+                "ch.protonmail.android",
+                "com.fsck.k9",
+                "net.thunderbird.android"
+        };
+        for (String packageName : clients) {
+            Candidate c = parseAssets(packageName, packageName, 0L,
+                    "PayPal",
+                    "Receipt for Your Payment to SAMPLE MERCHANT INC\n"
+                            + "You paid €25,00 EUR to SAMPLE MERCHANT INC");
+            assertNotNull(packageName, c);
+            assertEquals("EUR", c.currency);
+            assertEquals("25.00", c.amount);
+            assertEquals("SAMPLE MERCHANT INC", c.merchant);
+            assertEquals("PayPal", c.suggestedPaymentMethod);
+        }
+    }
+
+    @Test
     public void gmailNotificationFromOtherSenderIsNotCaptured() {
         // The PayPal source names both the Gmail package and the "PayPal" sender, so
         // a payment-shaped email from anyone else must not be claimed.

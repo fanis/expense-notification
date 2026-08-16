@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Add a bundled **PayPal** input config that captures PayPal payment-receipt emails from Gmail notifications ("You paid $17,67 USD to ..." and "You sent a/an (automatic) payment of ... to ..."), suggesting **PayPal** as the payment method. To support it, an input config's `match` may now name both `packages` and `senders`: the notification must then come from one of the packages **and** have a title equal to one of the senders, so only the named email sender is watched and the rest of Gmail's notifications are ignored.
+- Add a bundled **PayPal** input config that captures PayPal payment-receipt emails from the notifications of well-known Android email apps (Gmail, Outlook, Samsung Email, Yahoo Mail, Proton Mail, K-9/Thunderbird, and more) — "You paid $17,67 USD to ...", "You sent a/an (automatic) payment of ... to ...", and the classic "This email confirms that you have paid ... $28.99 USD" wording — suggesting **PayPal** as the payment method. Clients that show the raw sender address instead of the display name are matched through `service@paypal.com` / `service@intl.paypal.com` sender titles. To support it, an input config's `match` may now name both `packages` and `senders`: the notification must then come from one of the packages **and** have a title equal to one of the senders, so only the named email sender is watched and the rest of Gmail's notifications are ignored.
 
 ## v1.3.0 - 2026-08-09
 - Add a **Theme** setting with Auto (follow system), Light, and Dark modes. Every screen, dialog, and the system bars switch palettes with the choice; Auto tracks the device's dark-mode setting live.
