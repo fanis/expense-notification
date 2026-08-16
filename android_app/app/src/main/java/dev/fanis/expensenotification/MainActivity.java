@@ -106,7 +106,7 @@ public class MainActivity extends BaseActivity {
             return;
         }
         for (Candidate candidate : candidates) {
-            list.addView(card(candidate));
+            list.addView(card(candidate, candidates));
         }
     }
 
@@ -157,7 +157,7 @@ public class MainActivity extends BaseActivity {
         return card;
     }
 
-    private View card(Candidate candidate) {
+    private View card(Candidate candidate, List<Candidate> all) {
         LinearLayout card = new LinearLayout(this);
         styleCard(card);
 
@@ -181,6 +181,16 @@ public class MainActivity extends BaseActivity {
             badge.setTextSize(13);
             badge.setPadding(0, dp(2), 0, dp(2));
             card.addView(badge);
+        }
+
+        String duplicateSource = DuplicateHint.otherSource(candidate, all);
+        if (!duplicateSource.isEmpty()) {
+            TextView hint = new TextView(this);
+            hint.setText("Possible duplicate — also captured from " + duplicateSource);
+            hint.setTextColor(COLOR_HINT);
+            hint.setTextSize(13);
+            hint.setPadding(0, dp(2), 0, dp(2));
+            card.addView(hint);
         }
 
         card.addView(bodyText(
