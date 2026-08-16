@@ -105,6 +105,37 @@ final class CandidateDb extends SQLiteOpenHelper {
         return getWritableDatabase().insertWithOnConflict("candidates", null, values, SQLiteDatabase.CONFLICT_IGNORE);
     }
 
+    // How far apart two captures of the same package/amount/currency/merchant can be
+    // and still count as the same payment seen through two notification shapes (its
+    // own notification vs. a line of a stacked summary).
+    static final long EQUIVALENT_WINDOW_MS = 72L * 60 * 60 * 1000;
+
+    /**
+     * True when a candidate with the same package, amount, currency, and merchant was
+     * already captured near this time. Used to keep a payment recovered from a stacked
+     * summary line from duplicating the capture of its own notification, whose body
+     * text (and therefore dedupe key) differs from the summary line's.
+     */
+    boolean hasEquivalent(Candidate candidate) {
+        try (Cursor cursor = getReadableDatabase().query(
+                "candidates",
+                new String[]{"id"},
+                "package_name = ? AND amount = ? AND currency = ? AND merchant = ? AND posted_at BETWEEN ? AND ?",
+                new String[]{
+                        value(candidate.packageName),
+                        value(candidate.amount),
+                        value(candidate.currency),
+                        value(candidate.merchant),
+                        String.valueOf(candidate.postedAt - EQUIVALENT_WINDOW_MS),
+                        String.valueOf(candidate.postedAt + EQUIVALENT_WINDOW_MS)},
+                null,
+                null,
+                null,
+                "1")) {
+            return cursor.moveToFirst();
+        }
+    }
+
     List<Candidate> listAll() {
         ArrayList<Candidate> items = new ArrayList<>();
         ArrayList<Candidate> stale = new ArrayList<>();

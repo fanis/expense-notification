@@ -245,6 +245,57 @@ public class ExpenseParserTest {
     }
 
     @Test
+    public void parsesPayPalRefundAsIncome() {
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "Refund from SAMPLE MERCHANT INC\nYou received a refund of $12,34 USD from SAMPLE MERCHANT INC");
+        assertNotNull(c);
+        assertTrue(c.isIncome());
+        assertEquals("USD", c.currency);
+        assertEquals("12.34", c.amount);
+        assertEquals("SAMPLE MERCHANT INC", c.merchant);
+        assertEquals("Income", c.suggestedCategory);
+        assertEquals("PayPal", c.suggestedPaymentMethod);
+    }
+
+    @Test
+    public void parsesPayPalMoneyReceivedAsIncome() {
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "You've got money\nSAMPLE NAME sent you $20,00 USD");
+        assertNotNull(c);
+        assertTrue(c.isIncome());
+        assertEquals("20.00", c.amount);
+        assertEquals("SAMPLE NAME", c.merchant);
+    }
+
+    @Test
+    public void parsesTruncatedPayPalReceiptFromSubject() {
+        // The "You paid ... to ..." line was cut from the notification preview; the
+        // subject still names the merchant and the preview still shows an amount.
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "Receipt for Your Payment to SAMPLE MERCHANT INC\nHello, SAMPLE NAME. Your payment of $12,34 USD is complete");
+        assertNotNull(c);
+        assertEquals("12.34", c.amount);
+        assertEquals("SAMPLE MERCHANT INC", c.merchant);
+        assertEquals("PayPal", c.suggestedPaymentMethod);
+    }
+
+    @Test
+    public void payPalMoneyRequestIsNotCaptured() {
+        // A money request is not a movement of money yet.
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "SAMPLE NAME sent you a request for $5,00 USD");
+        assertNull(c);
+    }
+
+    @Test
     public void gmailNotificationFromOtherSenderIsNotCaptured() {
         // The PayPal source names both the Gmail package and the "PayPal" sender, so
         // a payment-shaped email from anyone else must not be claimed.
