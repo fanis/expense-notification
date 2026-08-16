@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Add a bundled **PayPal** input config that captures PayPal payment-receipt emails from the notifications of well-known Android email apps (Gmail, Outlook, Samsung Email, Yahoo Mail, Proton Mail, K-9/Thunderbird, and more) — "You paid $12,34 USD to ...", "You sent a/an (automatic) payment of ... to ...", and the classic "This email confirms that you have paid ... $28.99 USD" wording — suggesting **PayPal** as the payment method. Clients that show the raw sender address instead of the display name are matched through `service@paypal.com` / `service@intl.paypal.com` sender titles. Any Unicode currency symbol and any ISO currency code are accepted (e.g. `¥1,500 JPY`), not just €/$/£.
+- Add an optional **Home currency** setting: captures in a different currency (e.g. a USD PayPal receipt on a EUR book) show a warning badge in the review queue, since the output app receives the amount as a bare number with no currency field. Leave the setting empty to disable the badge. To support it, an input config's `match` may now name both `packages` and `senders`: the notification must then come from one of the packages **and** have a title equal to one of the senders, so only the named email sender is watched and the rest of Gmail's notifications are ignored.
 
 ## v1.3.0 - 2026-08-09
 - Add a **Theme** setting with Auto (follow system), Light, and Dark modes. Every screen, dialog, and the system bars switch palettes with the choice; Auto tracks the device's dark-mode setting live.

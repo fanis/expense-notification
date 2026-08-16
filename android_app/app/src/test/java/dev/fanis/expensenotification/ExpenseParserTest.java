@@ -98,6 +98,7 @@ public class ExpenseParserTest {
                 "bank-of-cyprus.json",
                 "eurobank.json",
                 "google-wallet.json",
+                "paypal.json",
                 "revolut.json"
         };
         for (String input : inputs) {
@@ -181,6 +182,88 @@ public class ExpenseParserTest {
         assertEquals("33.95", c.amount);
         assertEquals("SAMPLE UTILITY", c.merchant);
         assertEquals("Credit Card", c.suggestedPaymentMethod);
+    }
+
+    @Test
+    public void parsesPayPalReceiptEmailFromGmail() {
+        // Real Gmail notification for a PayPal payment receipt: title is the email
+        // sender ("PayPal"), body is the subject plus snippet. The amount uses a
+        // locale decimal comma ($12,34 USD).
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "Receipt for Your Payment to SAMPLE MERCHANT INC\n"
+                        + "SAMPLE NAME, you successfully sent a payment.\n"
+                        + "Hello, SAMPLE NAME\n"
+                        + "You paid $12,34 USD to SAMPLE MERCHANT INC\n"
+                        + "View or Manage Payment");
+        assertNotNull(c);
+        assertEquals("USD", c.currency);
+        assertEquals("12.34", c.amount);
+        assertEquals("SAMPLE MERCHANT INC", c.merchant);
+        assertEquals("PayPal", c.suggestedPaymentMethod);
+    }
+
+    @Test
+    public void parsesPayPalReceiptEmailFromOtherEmailClients() {
+        // The PayPal source watches the well-known Android email clients, not just
+        // Gmail; each shows the sender ("PayPal") as the notification title.
+        String[] clients = {
+                "com.microsoft.office.outlook",
+                "com.samsung.android.email.provider",
+                "com.yahoo.mobile.client.android.mail",
+                "ch.protonmail.android",
+                "com.fsck.k9",
+                "net.thunderbird.android"
+        };
+        for (String packageName : clients) {
+            Candidate c = parseAssets(packageName, packageName, 0L,
+                    "PayPal",
+                    "Receipt for Your Payment to SAMPLE MERCHANT INC\n"
+                            + "You paid €25,00 EUR to SAMPLE MERCHANT INC");
+            assertNotNull(packageName, c);
+            assertEquals("EUR", c.currency);
+            assertEquals("25.00", c.amount);
+            assertEquals("SAMPLE MERCHANT INC", c.merchant);
+            assertEquals("PayPal", c.suggestedPaymentMethod);
+        }
+    }
+
+    @Test
+    public void parsesPayPalYenReceiptWithNonLatinSymbol() {
+        // Any Unicode currency symbol may precede the amount, and any ISO code may
+        // follow it; grouped thousands without decimals must parse as whole yen.
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "Receipt for Your Payment to SAMPLE MERCHANT\nYou paid ¥1,500 JPY to SAMPLE MERCHANT");
+        assertNotNull(c);
+        assertEquals("JPY", c.currency);
+        assertEquals("1500", c.amount);
+        assertEquals("SAMPLE MERCHANT", c.merchant);
+        assertEquals("PayPal", c.suggestedPaymentMethod);
+    }
+
+    @Test
+    public void gmailNotificationFromOtherSenderIsNotCaptured() {
+        // The PayPal source names both the Gmail package and the "PayPal" sender, so
+        // a payment-shaped email from anyone else must not be claimed.
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "SAMPLE SENDER",
+                "You paid $12,34 USD to SAMPLE MERCHANT INC");
+        assertNull(c);
+    }
+
+    @Test
+    public void nonPaymentPayPalEmailIsNotCaptured() {
+        // A PayPal promo email with an amount in it is not a receipt; the source has
+        // no amount fallback, so only receipt wording is captured.
+        Candidate c = parseAssets(
+                "com.google.android.gm", "Gmail", 0L,
+                "PayPal",
+                "SAMPLE NAME, save $5,00 USD on your next purchase");
+        assertNull(c);
     }
 
     @Test

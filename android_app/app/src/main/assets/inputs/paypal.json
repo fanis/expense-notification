@@ -1,0 +1,156 @@
+{
+  "id": "paypal",
+  "displayName": "PayPal",
+  "enabled": true,
+  "priority": 30,
+  "match": {
+    "packages": [
+      "com.google.android.gm",
+      "com.google.android.gm.lite",
+      "com.microsoft.office.outlook",
+      "com.samsung.android.email.provider",
+      "com.android.email",
+      "com.yahoo.mobile.client.android.mail",
+      "com.aol.mobile.aolapp",
+      "ch.protonmail.android",
+      "de.tutao.tutanota",
+      "com.fastmail.app",
+      "com.fsck.k9",
+      "net.thunderbird.android",
+      "me.bluemail.mail",
+      "org.kman.AquaMail",
+      "com.readdle.spark",
+      "com.easilydo.mail",
+      "com.ninefolders.hd3",
+      "com.zoho.mail",
+      "com.basecamp.hey",
+      "ru.yandex.mail",
+      "ru.mail.mailapp",
+      "de.gmx.mobile.android.mail",
+      "de.web.mobile.android.mail",
+      "com.mail.mobile.android.mail"
+    ],
+    "senders": [
+      "paypal",
+      "service@paypal.com",
+      "service@intl.paypal.com"
+    ]
+  },
+  "transforms": [
+    "normalizeAmount"
+  ],
+  "rules": [
+    {
+      "name": "payment-receipt",
+      "type": "regex",
+      "pattern": "\\bYou\\s+(?:paid|sent)\\s+(?:an?\\s+(?:automatic\\s+)?payment\\s+of\\s+)?(?:\\p{Sc}\\s*)?(?<amount>(?:[0-9]{1,3}(?:[.,][0-9]{3})+[.,][0-9]{2}(?![0-9])|[0-9]{1,3}(?:[.,][0-9]{3})+(?![0-9])|[0-9]+(?:[.,][0-9]{2})?))\\s*(?<currency>[A-Z]{3})\\s+to\\s+(?<merchant>[^\\r\\n]+?)[.\\s]*$",
+      "flags": [
+        "caseInsensitive",
+        "multiline"
+      ],
+      "output": {
+        "paymentMethod": "PayPal",
+        "category": "@keyword"
+      }
+    },
+    {
+      "name": "payment-confirmation",
+      "type": "regex",
+      "pattern": "\\bconfirms\\s+that\\s+you\\s+have\\s+paid\\s+(?<merchant>[^\\r\\n]+?)[.,]*\\s*(?:\\([^)\\r\\n]*\\)\\s*)?\\p{Sc}\\s*(?<amount>(?:[0-9]{1,3}(?:[.,][0-9]{3})+[.,][0-9]{2}(?![0-9])|[0-9]{1,3}(?:[.,][0-9]{3})+(?![0-9])|[0-9]+(?:[.,][0-9]{2})?))\\s*(?<currency>[A-Z]{3})\\b",
+      "flags": [
+        "caseInsensitive"
+      ],
+      "output": {
+        "paymentMethod": "PayPal",
+        "category": "@keyword"
+      }
+    }
+  ],
+  "tests": [
+    {
+      "name": "gmail payment receipt",
+      "package": "com.google.android.gm",
+      "app": "Gmail",
+      "title": "PayPal",
+      "body": "Receipt for Your Payment to SAMPLE MERCHANT INC\nSAMPLE NAME, you successfully sent a payment.\nHello, SAMPLE NAME\nYou paid $12,34 USD to SAMPLE MERCHANT INC\nView or Manage Payment",
+      "expect": {
+        "amount": "12.34",
+        "currency": "USD",
+        "merchant": "SAMPLE MERCHANT INC",
+        "paymentMethod": "PayPal"
+      }
+    },
+    {
+      "name": "automatic payment receipt",
+      "package": "com.google.android.gm",
+      "app": "Gmail",
+      "title": "PayPal",
+      "body": "You sent an automatic payment of $9,99 USD to SAMPLE SUBSCRIPTION",
+      "expect": {
+        "amount": "9.99",
+        "currency": "USD",
+        "merchant": "SAMPLE SUBSCRIPTION",
+        "paymentMethod": "PayPal"
+      }
+    },
+    {
+      "name": "outlook payment receipt",
+      "package": "com.microsoft.office.outlook",
+      "app": "Outlook",
+      "title": "PayPal",
+      "body": "Receipt for Your Payment to SAMPLE MERCHANT INC\nYou paid \u20AC25,00 EUR to SAMPLE MERCHANT INC",
+      "expect": {
+        "amount": "25.00",
+        "currency": "EUR",
+        "merchant": "SAMPLE MERCHANT INC",
+        "paymentMethod": "PayPal"
+      }
+    },
+    {
+      "name": "yen receipt with non-latin currency symbol",
+      "package": "com.google.android.gm",
+      "app": "Gmail",
+      "title": "PayPal",
+      "body": "Receipt for Your Payment to SAMPLE MERCHANT\nYou paid \u00A51,500 JPY to SAMPLE MERCHANT",
+      "expect": {
+        "amount": "1500",
+        "currency": "JPY",
+        "merchant": "SAMPLE MERCHANT",
+        "paymentMethod": "PayPal"
+      }
+    },
+    {
+      "name": "classic confirmation wording with address as sender title",
+      "package": "com.fsck.k9",
+      "app": "K-9 Mail",
+      "title": "service@paypal.com",
+      "body": "Receipt for Your Payment to SAMPLE MERCHANT, Inc\nThis email confirms that you have paid SAMPLE MERCHANT, Inc., (sample@example.com) $28.99 USD using PayPal.",
+      "expect": {
+        "amount": "28.99",
+        "currency": "USD",
+        "merchant": "SAMPLE MERCHANT, Inc",
+        "paymentMethod": "PayPal"
+      }
+    },
+    {
+      "name": "non-payment paypal email is ignored",
+      "package": "com.google.android.gm",
+      "app": "Gmail",
+      "title": "PayPal",
+      "body": "SAMPLE NAME, save $5,00 USD on your next purchase",
+      "expect": {
+        "matched": false
+      }
+    },
+    {
+      "name": "other gmail sender is ignored",
+      "package": "com.google.android.gm",
+      "app": "Gmail",
+      "title": "SAMPLE SENDER",
+      "body": "You paid $12,34 USD to SAMPLE MERCHANT INC",
+      "expect": {
+        "matched": false
+      }
+    }
+  ]
+}
