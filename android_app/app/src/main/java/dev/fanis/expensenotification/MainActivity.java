@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -27,6 +28,7 @@ public class MainActivity extends BaseActivity {
     private LinearLayout setupActions;
     private LinearLayout list;
     private TextView status;
+    private Button filterButton;
     // Candidate loading runs the reparse-on-config-change pass, so keep it off the
     // UI thread; single-threaded so a stale refresh can't overtake a newer one.
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
@@ -71,6 +73,14 @@ public class MainActivity extends BaseActivity {
         status.setTextColor(COLOR_MUTED);
         root.addView(status);
 
+        filterButton = secondaryButton(filterLabel());
+        filterButton.setOnClickListener(v -> {
+            QueuePreferences.setOnlyUnprocessed(this, !QueuePreferences.onlyUnprocessed(this));
+            filterButton.setText(filterLabel());
+            refresh();
+        });
+        root.addView(filterButton);
+
         setupActions = new LinearLayout(this);
         setupActions.setOrientation(LinearLayout.VERTICAL);
         root.addView(setupActions);
@@ -95,19 +105,41 @@ public class MainActivity extends BaseActivity {
 
     private void renderList(List<Candidate> candidates) {
         list.removeAllViews();
-        status.setText(candidates.size() + " captured notification(s). New payment notifications are captured automatically.");
-        if (candidates.isEmpty()) {
+        boolean onlyUnprocessed = QueuePreferences.onlyUnprocessed(this);
+        List<Candidate> shown = onlyUnprocessed ? unprocessedOnly(candidates) : candidates;
+        status.setText(onlyUnprocessed
+                ? shown.size() + " unprocessed of " + candidates.size() + " captured notification(s)."
+                : candidates.size() + " captured notification(s). New payment notifications are captured automatically.");
+        if (shown.isEmpty()) {
             LinearLayout emptyCard = new LinearLayout(this);
             styleCard(emptyCard);
-            TextView empty = bodyText("No candidates yet.");
+            TextView empty = bodyText(onlyUnprocessed && !candidates.isEmpty()
+                    ? "No unprocessed candidates."
+                    : "No candidates yet.");
             empty.setTextSize(16);
             emptyCard.addView(empty);
             list.addView(emptyCard);
             return;
         }
-        for (Candidate candidate : candidates) {
+        for (Candidate candidate : shown) {
+            // Duplicate hints compare against everything captured, including items
+            // the filter is currently hiding.
             list.addView(card(candidate, candidates));
         }
+    }
+
+    static List<Candidate> unprocessedOnly(List<Candidate> candidates) {
+        ArrayList<Candidate> unprocessed = new ArrayList<>();
+        for (Candidate candidate : candidates) {
+            if (Candidate.STATUS_NEW.equals(candidate.status)) {
+                unprocessed.add(candidate);
+            }
+        }
+        return unprocessed;
+    }
+
+    private String filterLabel() {
+        return QueuePreferences.onlyUnprocessed(this) ? "Show: unprocessed only" : "Show: all";
     }
 
     private void renderSetupActions() {
