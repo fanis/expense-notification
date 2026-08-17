@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.5.0 - 2026-08-17
 - Add a **Show: all / unprocessed only** filter to the review queue that hides processed and skipped candidates. The choice persists across launches, the status line shows how many of the captured notifications are unprocessed, and duplicate hints still compare against everything captured, including items the filter is hiding.
 
 ## v1.4.0 - 2026-08-16
