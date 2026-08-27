@@ -129,10 +129,13 @@ final class ConfiguredParser {
         return new NotificationText((ExpenseParser.safe(title) + "\n" + ExpenseParser.safe(body)).trim());
     }
 
+    // Both sides are uppercased and folded to Latin lookalikes so a Greek reject
+    // phrase catches the message whether the gateway sent real Greek capitals or
+    // their Latin twins (see ExpenseParser.foldAmbiguousGreek).
     private boolean isRejected(String combined) {
-        String lower = combined.toLowerCase(Locale.ROOT);
+        String haystack = ExpenseParser.foldAmbiguousGreek(combined.toUpperCase(Locale.ROOT));
         for (String phrase : global.rejectPhrases) {
-            if (lower.contains(phrase)) {
+            if (haystack.contains(ExpenseParser.foldAmbiguousGreek(phrase.toUpperCase(Locale.ROOT)))) {
                 return true;
             }
         }

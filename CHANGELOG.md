@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Stop capturing Bank of Cyprus balance-inquiry statements ("ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ ... ΗΤΑΝ EUR ...") as expenses: they carry amounts but are not charges, and the amount fallback was queueing the available balance as an Electronic Transfer. Reject-phrase matching now folds Greek capitals to their Latin lookalikes, so the new phrase catches the message in either encoding the gateway sends.
 
 ## v1.5.0 - 2026-08-17
 - Add a **Show: all / unprocessed only** filter to the review queue that hides processed and skipped candidates. The choice persists across launches, the status line shows how many of the captured notifications are unprocessed, and duplicate hints still compare against everything captured, including items the filter is hiding.
