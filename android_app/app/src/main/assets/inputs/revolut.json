@@ -39,6 +39,16 @@
       }
     },
     {
+      "name": "low-balance top-up prompt is rejected",
+      "package": "com.revolut.revolut",
+      "app": "Revolut",
+      "title": "EUR 30 needed",
+      "body": "If you can, add money now so your next transaction is covered",
+      "expect": {
+        "matched": false
+      }
+    },
+    {
       "name": "pending approval prompt is rejected",
       "package": "com.revolut.business",
       "app": "Business",

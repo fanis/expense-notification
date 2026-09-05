@@ -363,6 +363,19 @@ public class ExpenseParserTest {
         assertEquals("Electronic Transfer", c.suggestedPaymentMethod);
     }
 
+    /**
+     * A balance-inquiry statement carries amounts but is not a charge; it must not
+     * be captured by the amount fallback, in either Greek or lookalike encoding.
+     */
+    @Test
+    public void bocBalanceStatementIsNotCaptured() {
+        String sms = "ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ XXXX000000 (ΚΑΡΤΑ) ΣΤΙΣ 27/08/2026 12:55 "
+                + "ΗΤΑΝ EUR -69,60 ΚΑΙ ΤΟ ΔΙΑΘΕΣΙΜΟ ΥΠΟΛΟΙΠΟ ΗΤΑΝ EUR 1.930,40.";
+        for (String body : new String[] {sms, toLatinLookalike(sms)}) {
+            assertNull(body, parseSms("BOC Message", body));
+        }
+    }
+
     /** The Latin-lookalike encoding must yield the same structured fields. */
     @Test
     public void latinLookalikeEncodingMatchesGreek() {
@@ -572,6 +585,15 @@ public class ExpenseParserTest {
         Candidate c = parseRevolut(
                 "Verify a payment",
                 "A card payment of €112.14 to SAMPLE UTILITY is waiting for your approval. Tap to start");
+        assertNull(c);
+    }
+
+    @Test
+    public void rejectsLowBalanceTopUpPrompt() {
+        // The low-balance nag carries an amount but no money moved.
+        Candidate c = parseRevolut(
+                "EUR 30 needed",
+                "If you can, add money now so your next transaction is covered");
         assertNull(c);
     }
 

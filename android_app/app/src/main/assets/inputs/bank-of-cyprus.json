@@ -152,6 +152,26 @@
       }
     },
     {
+      "name": "balance statement is not captured",
+      "package": "com.textra",
+      "app": "Textra",
+      "title": "BOC Message",
+      "body": "ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ XXXX000000 (ΚΑΡΤΑ) ΣΤΙΣ 27/08/2026 12:55 ΗΤΑΝ EUR -69,60 ΚΑΙ ΤΟ ΔΙΑΘΕΣΙΜΟ ΥΠΟΛΟΙΠΟ ΗΤΑΝ EUR 1.930,40.",
+      "expect": {
+        "matched": false
+      }
+    },
+    {
+      "name": "latin-lookalike balance statement is not captured",
+      "package": "com.textra",
+      "app": "Textra",
+      "title": "BOC Message",
+      "body": "TO YΠOΛOIΠO TOY ΛOΓ/ΣMOY XXXX000000 (KAPTA) ΣTIΣ 27/08/2026 12:55 HTAN EUR -69,60 KAI TO ΔIAΘEΣIMO YΠOΛOIΠO HTAN EUR 1.930,40.",
+      "expect": {
+        "matched": false
+      }
+    },
+    {
       "name": "incoming credit",
       "package": "com.textra",
       "app": "Textra",

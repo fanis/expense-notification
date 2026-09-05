@@ -18,8 +18,10 @@ import java.util.Set;
 final class GlobalConfig {
     // Notifications that look payment-shaped but are not a completed charge: 3DS
     // approval prompts (the duplicate that precedes a real "successful" message),
-    // declines, and card verification/registration. Matched as whole phrases so they
-    // don't catch a genuine payment whose merchant name happens to contain a word.
+    // declines, card verification/registration, and account-balance statements.
+    // Matched as whole phrases so they don't catch a genuine payment whose merchant
+    // name happens to contain a word. Matching is case-insensitive and folds Greek
+    // capitals to their Latin lookalikes, so Greek phrases are written in capitals.
     private static final String[] REJECT_PHRASES = {
             "waiting for your approval",
             "verify a payment",
@@ -33,6 +35,11 @@ final class GlobalConfig {
             "have not been charged",
             "card registration",
             "card verification",
+            // Revolut low-balance top-up prompt: "If you can, add money now so
+            // your next transaction is covered".
+            "add money now",
+            // BOC balance statement: "ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ ... ΗΤΑΝ EUR ..."
+            "ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ",
     };
 
     private static final String[] SMS_PACKAGES = {
