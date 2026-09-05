@@ -589,6 +589,15 @@ public class ExpenseParserTest {
     }
 
     @Test
+    public void rejectsLowBalanceTopUpPrompt() {
+        // The low-balance nag carries an amount but no money moved.
+        Candidate c = parseRevolut(
+                "EUR 30 needed",
+                "If you can, add money now so your next transaction is covered");
+        assertNull(c);
+    }
+
+    @Test
     public void rejectsDecline() {
         Candidate c = parseRevolut("Card payment declined", "Insufficient balance. Tap for details");
         assertNull(c);

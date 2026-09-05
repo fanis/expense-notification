@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Stop capturing Revolut's low-balance top-up prompt ("If you can, add money now so your next transaction is covered") as an expense: it carries the needed amount but no money moved.
 - Stop capturing Bank of Cyprus balance-inquiry statements ("ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ ... ΗΤΑΝ EUR ...") as expenses: they carry amounts but are not charges, and the amount fallback was queueing the available balance as an Electronic Transfer. Reject-phrase matching now folds Greek capitals to their Latin lookalikes, so the new phrase catches the message in either encoding the gateway sends.
 
 ## v1.5.0 - 2026-08-17

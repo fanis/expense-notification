@@ -35,6 +35,9 @@ final class GlobalConfig {
             "have not been charged",
             "card registration",
             "card verification",
+            // Revolut low-balance top-up prompt: "If you can, add money now so
+            // your next transaction is covered".
+            "add money now",
             // BOC balance statement: "ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ ... ΗΤΑΝ EUR ..."
             "ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ",
     };
