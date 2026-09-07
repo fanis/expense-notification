@@ -40,6 +40,10 @@ final class GlobalConfig {
             "add money now",
             // BOC balance statement: "ΤΟ ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ/ΣΜΟΥ ... ΗΤΑΝ EUR ..."
             "ΥΠΟΛΟΙΠΟ ΤΟΥ ΛΟΓ",
+            // BOC credit-card bill settling by direct debit: the card purchases it
+            // pays off are each captured on their own, so entering it too would
+            // double count. Narrow enough to leave other payment orders alone.
+            "DIRECT DEBIT CREDIT CARDS",
     };
 
     private static final String[] SMS_PACKAGES = {
