@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.5.2 - 2026-09-07
 - Stop capturing the Bank of Cyprus credit-card bill direct debit ("ΕΝΤΟΛΗ ΠΛΗΡΩΜΗΣ DIRECT DEBIT CREDIT CARDS ... BILL ...") as an expense: it settles card purchases that are each captured on their own, so entering it too would double count the month. Other payment orders, including SEPA direct debits, are still captured.
 
 ## v1.5.1 - 2026-09-05
