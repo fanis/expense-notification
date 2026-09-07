@@ -152,6 +152,16 @@
       }
     },
     {
+      "name": "credit-card bill direct debit is not captured",
+      "package": "com.textra",
+      "app": "Textra",
+      "title": "BOC Message",
+      "body": "Ο ΛΟΓ/ΣΜΟΣ XXXX000000 (ΤΡΕΧΟΥΜΕΝΟΣ) ΧΡΕΩΘΗΚΕ ΜΕ ΤΟ ΠΟΣΟ ΤΩΝ EUR 12,34 ΣΤΙΣ 07/09/2026 06:58. ΠΕΡΙΓΡΑΦΗ: ΕΝΤΟΛΗ ΠΛΗΡΩΜΗΣ DIRECT DEBIT CREDIT CARDS 2026-09-07 BILL 00000000000",
+      "expect": {
+        "matched": false
+      }
+    },
+    {
       "name": "balance statement is not captured",
       "package": "com.textra",
       "app": "Textra",

@@ -376,6 +376,20 @@ public class ExpenseParserTest {
         }
     }
 
+    /**
+     * The monthly credit-card bill settling by direct debit pays off card purchases
+     * that are each captured on their own, so it must not be queued as well. Other
+     * payment orders (see parsesRealWorldBocTransferGatewayText) still are.
+     */
+    @Test
+    public void bocCreditCardBillDirectDebitIsNotCaptured() {
+        String sms = "Ο ΛΟΓ/ΣΜΟΣ XXXX000000 (ΤΡΕΧΟΥΜΕΝΟΣ) ΧΡΕΩΘΗΚΕ ΜΕ ΤΟ ΠΟΣΟ ΤΩΝ EUR 12,34 "
+                + "ΣΤΙΣ 07/09/2026 06:58. ΠΕΡΙΓΡΑΦΗ: ΕΝΤΟΛΗ ΠΛΗΡΩΜΗΣ DIRECT DEBIT CREDIT CARDS 2026-09-07 BILL 00000000000";
+        for (String body : new String[] {sms, toLatinLookalike(sms)}) {
+            assertNull(body, parseSms("BOC Message", body));
+        }
+    }
+
     /** The Latin-lookalike encoding must yield the same structured fields. */
     @Test
     public void latinLookalikeEncodingMatchesGreek() {
