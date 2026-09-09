@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## v1.5.3 - 2026-09-09
 - Capture money received in Revolut ("Sent you €20", with the sender as the notification title) as **income** instead of an expense. The Revolut config previously had a single catch-all amount rule with no notion of direction, so an incoming transfer was booked as a spend. A regex rule can now also read the currency from a bare symbol (€20), not just an ISO code, which is how Revolut writes it.
 
 ## v1.5.2 - 2026-09-07
