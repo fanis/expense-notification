@@ -121,7 +121,8 @@ final class InputRule {
         }
         Candidate candidate = baseCandidate(packageName, appName, key, postedAt, title, body);
         candidate.amount = amount;
-        candidate.currency = valueOrGroup(matcher, combined, output.optString("currency", ""), "currency");
+        candidate.currency = ExpenseParser.normalizeCurrency(
+                valueOrGroup(matcher, combined, output.optString("currency", ""), "currency"));
         String merchant = group(matcher, combined, "merchant");
         if (merchant.isEmpty()) {
             merchant = merchantFromSource(title, body, new ExpenseParser.Amount(candidate.currency, candidate.amount));

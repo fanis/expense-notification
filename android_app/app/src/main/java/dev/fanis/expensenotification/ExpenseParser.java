@@ -302,6 +302,19 @@ final class ExpenseParser {
         return cleaned.matches(".*\\d.*") && cleaned.matches("[0-9 .\\-*\\u2022]+");
     }
 
+    /**
+     * Resolves a currency token captured by a rule to its ISO code: a symbol becomes
+     * the code ("\u20ac" -> "EUR"), an ISO code is passed through uppercased. Lets a
+     * regex rule read the currency off notifications that print only the symbol.
+     */
+    static String normalizeCurrency(String raw) {
+        String trimmed = safe(raw).trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        return currencyFromSymbol(trimmed).toUpperCase(Locale.ROOT);
+    }
+
     private static String currencyFromSymbol(String symbol) {
         if ("€".equals(symbol)) {
             return "EUR";
