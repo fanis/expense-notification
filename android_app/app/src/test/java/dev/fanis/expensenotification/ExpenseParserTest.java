@@ -602,6 +602,33 @@ public class ExpenseParserTest {
         assertNull(c);
     }
 
+    /**
+     * Money received from a person: Revolut puts the payer in the title and
+     * "Sent you <amount>" in the body, with only a symbol for the currency. Must be
+     * INCOME, not the expense the catch-all amount fallback would otherwise produce.
+     */
+    @Test
+    public void revolutMoneyReceivedIsIncome() {
+        Candidate c = parseRevolut("SAMPLE SENDER", "Sent you \u20ac20. Tap to say thank you");
+        assertNotNull(c);
+        assertEquals("EUR", c.currency);
+        assertEquals("20", c.amount);
+        assertEquals("SAMPLE SENDER", c.merchant);
+        assertEquals("INCOME", c.transactionType);
+        assertEquals("Income", c.suggestedCategory);
+        assertEquals("Electronic Transfer", c.suggestedPaymentMethod);
+    }
+
+    /** The outgoing spend must keep booking as an expense through the fallback. */
+    @Test
+    public void revolutSpendStaysAnExpense() {
+        Candidate c = parseRevolut("SAMPLE UTILITY", "You spent \u20ac33.95\nEUR balance: \u20ac543.21");
+        assertNotNull(c);
+        assertEquals("33.95", c.amount);
+        assertEquals("EXPENSE", c.transactionType);
+        assertEquals("Credit Card", c.suggestedPaymentMethod);
+    }
+
     @Test
     public void rejectsLowBalanceTopUpPrompt() {
         // The low-balance nag carries an amount but no money moved.

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Capture money received in Revolut ("Sent you €20", with the sender as the notification title) as **income** instead of an expense. The Revolut config previously had a single catch-all amount rule with no notion of direction, so an incoming transfer was booked as a spend. A regex rule can now also read the currency from a bare symbol (€20), not just an ISO code, which is how Revolut writes it.
 
 ## v1.5.2 - 2026-09-07
 - Stop capturing the Bank of Cyprus credit-card bill direct debit ("ΕΝΤΟΛΗ ΠΛΗΡΩΜΗΣ DIRECT DEBIT CREDIT CARDS ... BILL ...") as an expense: it settles card purchases that are each captured on their own, so entering it too would double count the month. Other payment orders, including SEPA direct debits, are still captured.
